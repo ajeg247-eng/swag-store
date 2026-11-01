@@ -771,7 +771,7 @@
     function guardarEstadoCompleto() {
       try {
         localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
-        localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos));
+        localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos.map(p => ({ ...p, fotos: (p.fotos || []).map(f => /^data:image\//i.test(String(f)) ? "" : f) }))));
         localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logsCajaNegra));
       } catch (error) {
         console.error("No se pudo guardar el estado local de SWAG:", error);
@@ -824,12 +824,52 @@
       if (dataUrl.length * 0.75 > maxBytes * 1.35) throw new Error("Una fotografía sigue siendo demasiado pesada. Prueba con una imagen más pequeña.");
       return dataUrl;
     }
+    // IMÁGENES EN SUPABASE STORAGE: el navegador conserva URLs, no archivos Base64 pesados.
+    const SWAG_MEDIA_BUCKET = "swag-media";
+    function swagDataUrlABlob(dataUrl) {
+      const parts = String(dataUrl).split(",");
+      const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || "image/jpeg";
+      const binary = atob(parts[1] || "");
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    }
+    async function subirImagenSWAGStorage(dataUrl, carpeta = "productos") {
+      if (!/^data:image\//i.test(String(dataUrl))) return dataUrl;
+      if (!swagDb || !swagAdminSession) throw new Error("Inicia sesión como CEO para subir imágenes al almacenamiento en la nube.");
+      const blob = swagDataUrlABlob(dataUrl);
+      const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+      const ruta = `${carpeta}/${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}.${extension}`;
+      const { error } = await swagDb.storage.from(SWAG_MEDIA_BUCKET).upload(ruta, blob, { contentType: blob.type, upsert: false, cacheControl: "31536000" });
+      if (error) throw new Error(`No se pudo subir una imagen a Supabase Storage: ${error.message}`);
+      const { data } = swagDb.storage.from(SWAG_MEDIA_BUCKET).getPublicUrl(ruta);
+      if (!data?.publicUrl) throw new Error("Supabase no devolvió la dirección pública de la imagen.");
+      return data.publicUrl;
+    }
+    async function migrarFotosProductosAStorage() {
+      if (!Array.isArray(productos)) return;
+      for (const producto of productos) {
+        if (!Array.isArray(producto.fotos)) continue;
+        const nuevas = [];
+        for (const foto of producto.fotos) nuevas.push(await subirImagenSWAGStorage(foto, `productos/${producto.id}`));
+        producto.fotos = nuevas;
+      }
+    }
+    async function guardarEstadoNubeAhora() {
+      if (!swagDb || !swagAdminSession || !swagCloudReady) throw new Error("La sesión de Supabase no está lista. Inicia sesión como CEO y vuelve a intentarlo.");
+      clearTimeout(swagCloudSaveTimer);
+      await migrarFotosProductosAStorage();
+      const estado = obtenerEstadoSWAG();
+      const { error } = await swagDb.from("swag_app_state").upsert({ id: "main", data: estado, updated_at: new Date().toISOString() });
+      if (error) throw new Error(`No se pudo guardar el catálogo en la nube: ${error.message}`);
+      return true;
+    }
     function programarGuardadoNube() {
       if (!swagDb || !swagAdminSession || !swagCloudReady) return;
       clearTimeout(swagCloudSaveTimer);
       swagCloudSaveTimer = setTimeout(async () => {
-        const { error } = await swagDb.from("swag_app_state").upsert({ id: "main", data: obtenerEstadoSWAG(), updated_at: new Date().toISOString() });
-        if (error) console.error("Error guardando SWAG en nube:", error.message);
+        try { await guardarEstadoNubeAhora(); }
+        catch (error) { console.error("Error guardando SWAG en nube:", error); }
       }, 500);
     }
     async function cargarEstadoDesdeNube() {
@@ -849,7 +889,7 @@
       if (d.homeFeature === null || (d.homeFeature && typeof d.homeFeature === 'object')) homeFeature = d.homeFeature;
       localStorage.setItem(STORAGE_KEY_THEME, JSON.stringify(swagThemeData));
       localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
-      localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos));
+      localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos.map(p => ({ ...p, fotos: (p.fotos || []).map(f => /^data:image\//i.test(String(f)) ? "" : f) }))));
       localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logsCajaNegra));
       localStorage.setItem(STORAGE_KEY_HERO, JSON.stringify(heroTextData));
       localStorage.setItem(STORAGE_KEY_SHOWCASE, JSON.stringify(showcaseItems));
@@ -1298,7 +1338,10 @@
       if (submit) { submit.disabled = true; submit.dataset.oldText = submit.textContent; submit.textContent = "Procesando imágenes…"; }
       mostrarAvisoProducto("Optimizando fotografías y guardando el artículo…");
       try {
-        const fotosFinales = await Promise.all(files.map(async (file, i) => file ? await optimizarImagenProducto(file) : urls[i]));
+        const fotosOptimizadas = await Promise.all(files.map(async (file, i) => file ? await optimizarImagenProducto(file) : urls[i]));
+        if (!swagAdminSession || !swagCloudReady) throw new Error("Para publicar artículos con almacenamiento en la nube, inicia sesión como CEO y espera a que SWAG termine de sincronizar.");
+        const idTemporal = document.getElementById("pEditId")?.value || Date.now();
+        const fotosFinales = await Promise.all(fotosOptimizadas.map(foto => subirImagenSWAGStorage(foto, `productos/${idTemporal}`)));
         const editId = document.getElementById("pEditId")?.value;
         const existente = editId ? productos.find(p => String(p.id) === String(editId)) : null;
         const nuevo = {
@@ -1308,7 +1351,9 @@
         };
         const anterior = productos;
         productos = existente ? productos.map(p => String(p.id) === String(editId) ? nuevo : p) : [nuevo, ...productos];
-        if (!guardarEstadoCompleto()) { productos = anterior; throw new Error("No se pudo guardar el artículo en el navegador. Revisa el espacio disponible."); }
+        if (!guardarEstadoCompleto()) { productos = anterior; throw new Error("No se pudo guardar la información local del artículo."); }
+        try { await guardarEstadoNubeAhora(); }
+        catch (cloudError) { productos = anterior; guardarEstadoCompleto(); throw cloudError; }
         registrarLog(`${existente ? "Artículo actualizado" : "Nuevo artículo creado"}: "${nombre}" ($${precio} USD)`);
         renderizarCategorias();
         renderizarProductos();

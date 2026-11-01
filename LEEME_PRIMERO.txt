@@ -1,0 +1,28 @@
+SWAG — ALMACENAMIENTO DE IMÁGENES EN LA NUBE
+
+CONTENIDO
+- index.html
+- styles.css
+- script.js
+- CONFIGURAR_SUPABASE_STORAGE.sql
+
+ANTES DE PUBLICAR
+1. Entra en tu proyecto Supabase: https://supabase.com/dashboard/project/mnwshzltjmfpggetkbqy
+2. Abre SQL Editor y crea una consulta nueva.
+3. Abre CONFIGURAR_SUPABASE_STORAGE.sql, copia todo su contenido y ejecútalo UNA SOLA VEZ.
+4. Confirma que se creó el bucket swag-media en Storage.
+5. En tu repositorio SWAG reemplaza SOLO index.html, styles.css y script.js por los tres archivos de esta carpeta.
+6. No borres manifest.webmanifest, sw.js, iconos ni carpetas/archivos de imágenes existentes.
+7. Publica y recarga la web. Inicia sesión en el panel CEO antes de publicar artículos.
+
+QUÉ CAMBIA
+- Las fotos nuevas se optimizan y se suben a Supabase Storage.
+- Los productos guardan enlaces de imagen en vez de Base64 dentro de localStorage.
+- Al guardar un artículo, SWAG espera confirmación de Supabase antes de mostrar que se publicó.
+- Las fotografías Base64 de productos existentes se migran a Storage cuando se realiza el siguiente guardado de catálogo con sesión CEO activa.
+
+IMPORTANTE
+- No es almacenamiento infinito. La capacidad depende del plan y los límites de Supabase.
+- El bucket es público para lectura de imágenes de la tienda; las operaciones de subida, cambio y borrado requieren sesión autenticada.
+- No borres datos del navegador ni los productos antiguos antes de comprobar que el catálogo carga correctamente desde la nube.
+- Esta entrega pasó revisión de sintaxis JavaScript. No se pudo probar contra tu proyecto Supabase real ni ejecutar el SQL por ti.
