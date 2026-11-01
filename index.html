@@ -43,7 +43,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
 
-<link rel="stylesheet" href="styles.css?v=ceo-dashboard-20261102-2">
+<link rel="stylesheet" href="styles.css?v=nosotros-20261102-1">
 </head>
 <body class="bg-swagDark text-white min-h-screen flex flex-col font-sans selection:bg-swagLime selection:text-black" data-swag-theme="original">
   <div id="swagSeasonFx" aria-hidden="true"></div>
@@ -71,11 +71,12 @@
   </header>
 <nav class="ccm-11_stage" aria-label="Navegación principal SWAG">
   <div class="ccm-11_pointer" aria-hidden="true"></div>
-  <div class="ccm-11_machine" style="--n: 3;">
-    <div class="ccm-11_wheel" id="swagWheel" style="--n: 3; --rotation: 0deg;">
+  <div class="ccm-11_machine" style="--n: 4;">
+    <div class="ccm-11_wheel" id="swagWheel" style="--n: 4; --rotation: 0deg;">
       <button class="ccm-11_item is-active" type="button" data-page="page-home" data-index="0" aria-label="Ir a Inicio" aria-current="page" style="--i: 0;"><span class="ccm-11_label">Inicio</span></button>
       <button class="ccm-11_item" type="button" data-page="page-tech" data-index="1" aria-label="Ir a Tecnología" style="--i: 1;"><span class="ccm-11_label">Tecnología</span></button>
       <button class="ccm-11_item" type="button" data-page="page-catalog" data-index="2" aria-label="Ir a Catálogo" style="--i: 2;"><span class="ccm-11_label">Catálogo</span></button>
+      <button class="ccm-11_item" type="button" data-page="page-about" data-index="3" aria-label="Ir a Nosotros" style="--i: 3;"><span class="ccm-11_label">Nosotros</span></button>
     </div>
     <div class="ccm-11_face" aria-live="polite">
       <span class="ccm-11_face-kicker">NOW BROWSING</span>
@@ -85,7 +86,7 @@
   </div>
   <div class="ccm-11_steer" aria-label="Cambiar sección">
     <button type="button" id="swagWheelPrev" aria-label="Sección anterior" title="Anterior">‹</button>
-    <span id="swagWheelCount">01 / 03</span>
+    <span id="swagWheelCount">01 / 04</span>
     <button type="button" id="swagWheelNext" aria-label="Sección siguiente" title="Siguiente">›</button>
   </div>
 </nav>
@@ -194,6 +195,43 @@
   </section>
 </div>
 
+
+<!-- NOSOTROS: página independiente dentro de la navegación circular -->
+<div class="page-section" id="page-about" data-page-title="Nosotros" aria-hidden="true" aria-label="Página Nosotros">
+  <main class="swag-about-page">
+    <section class="swag-about-hero">
+      <div class="swag-about-orbit swag-about-orbit-one" aria-hidden="true"></div>
+      <div class="swag-about-orbit swag-about-orbit-two" aria-hidden="true"></div>
+      <div class="swag-about-hero-copy">
+        <span class="swag-about-kicker"><span></span> CONOCE SWAG</span>
+        <h1>Más que una tienda.<br><em>Una compra con confianza.</em></h1>
+        <p>En SWAG creemos que comprar en línea debe sentirse sencillo, seguro y transparente. Somos una tienda online nicaragüense que trabaja para acercarte artículos de calidad, una atención cercana y una experiencia de compra en la que puedas sentirte tranquilo.</p>
+        <div class="swag-about-location"><i data-lucide="map-pin"></i><span>Granada, Nicaragua</span></div>
+      </div>
+      <div class="swag-about-stamp" aria-label="SWAG, tienda online de Nicaragua"><span>SWAG</span><small>TIENDA ONLINE<br>NICARAGUA</small><i data-lucide="shield-check"></i></div>
+    </section>
+
+    <section class="swag-about-values" aria-label="Nuestros compromisos">
+      <article class="swag-about-value"><span class="swag-about-icon"><i data-lucide="shield-check"></i></span><h2>Compra con confianza</h2><p>Queremos que tengas claridad y tranquilidad durante tu compra, con comunicación directa y atención cercana para acompañarte cuando lo necesites.</p></article>
+      <article class="swag-about-value"><span class="swag-about-icon"><i data-lucide="badge-check"></i></span><h2>Calidad que importa</h2><p>Buscamos ofrecer artículos cuidadosamente seleccionados, priorizando su calidad, utilidad y valor para nuestros clientes.</p></article>
+      <article class="swag-about-value"><span class="swag-about-icon"><i data-lucide="truck"></i></span><h2>Envíos a los departamentos</h2><p>Estamos en Granada y trabajamos para llevar tus pedidos a distintos departamentos de Nicaragua, coordinando contigo los detalles de entrega.</p></article>
+    </section>
+
+    <section class="swag-about-shipping">
+      <div class="swag-about-shipping-icon"><i data-lucide="map"></i></div>
+      <div><span class="swag-about-kicker">DESDE GRANADA PARA NICARAGUA</span><h2>SWAG llega hasta donde estás.</h2><p>Estés en Granada o en otro departamento, queremos que puedas acceder a nuestros productos. Escríbenos para consultar la cobertura y coordinar tu envío.</p></div>
+      <a href="https://wa.me/50581759796" target="_blank" rel="noopener" class="swag-home-primary" onclick="reproducirSonido('click')">HABLAR CON SWAG <i data-lucide="arrow-up-right"></i></a>
+    </section>
+
+    <section class="swag-about-thanks">
+      <span class="swag-about-thanks-mark">“</span>
+      <span class="swag-about-kicker">ESTO TAMBIÉN ES GRACIAS A TI</span>
+      <h2>A quienes confían en SWAG,<br><em>gracias de corazón.</em></h2>
+      <p>Cada persona que nos visita, comparte nuestro trabajo o realiza una compra forma parte de esta historia. Gracias por elegirnos, por apoyar este proyecto que crece desde Granada y por permitirnos llegar un poquito más lejos con cada pedido. Valoramos muchísimo tu confianza. Seguiremos trabajando con dedicación para ofrecerte buenos productos, atención honesta y una experiencia que te haga querer volver.</p>
+      <strong>Con gratitud, equipo SWAG.</strong>
+    </section>
+  </main>
+</div>
 
 
   <!-- ACCESO CEO — BOVEDA PRIVADA -->
@@ -569,6 +607,6 @@
   <button id="swagInstallBtn" type="button" aria-label="Instalar SWAG en este dispositivo">＋ Instalar SWAG</button>
   
 
-<script src="script.js?v=ceo-dashboard-20261102-2"></script>
+<script src="script.js?v=nosotros-20261102-1"></script>
 </body>
 </html>
