@@ -43,7 +43,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
 
-<link rel="stylesheet" href="styles.css?v=wheel-desktop-20261101">
+<link rel="stylesheet" href="styles.css?v=ceo-control-center-20261101-1">
 </head>
 <body class="bg-swagDark text-white min-h-screen flex flex-col font-sans selection:bg-swagLime selection:text-black" data-swag-theme="original">
   <div id="swagSeasonFx" aria-hidden="true"></div>
@@ -224,21 +224,32 @@
 
   <!-- PANEL CEO CAJA NEGRA (OCULTO) -->
   <section id="adminSection" class="hidden fixed inset-0 z-50 bg-black/95 backdrop-blur-xl p-4 md:p-8 overflow-y-auto">
-    <div class="max-w-5xl mx-auto bg-swagCard border border-swagLime/40 rounded-3xl p-6 md:p-8 my-6 shadow-2xl animate-pop">
+    <div class="swag-ceo-shell max-w-7xl mx-auto bg-swagCard border border-swagLime/40 rounded-3xl p-5 md:p-8 my-4 md:my-6 shadow-2xl animate-pop">
       <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
         <div>
-          <h2 class="text-2xl font-black uppercase text-swagLime flex items-center gap-2">
-            <i data-lucide="terminal"></i> Panel de CEO | Caja Negra
-          </h2>
-          <p class="text-xs text-gray-400">Gestión exclusiva de productos, fotografías (mínimo 3) y eliminación de categorías</p>
+          <div class="flex items-center gap-3">
+            <span class="swag-ceo-brandmark"><i data-lucide="shield-check"></i></span>
+            <div>
+              <div class="swag-ceo-overline">SWAG / CONTROL CENTER</div>
+              <h2 class="text-2xl md:text-3xl font-black uppercase text-white flex items-center gap-2">CEO <span class="text-swagLime">COMMAND</span></h2>
+              <p class="text-xs text-gray-400">Centro de control de contenido, catálogo, apariencia y experiencia.</p>
+            </div>
+          </div>
         </div>
         <button onclick="cerrarAdmin(); reproducirSonido('click');" class="bg-swagGray hover:bg-white hover:text-black text-white p-2 rounded-full transition">
           <i data-lucide="x"></i>
         </button>
       </div>
 
+      <nav class="swag-ceo-nav" aria-label="Secciones del panel CEO">
+        <a href="#ceo-overview"> <i data-lucide="layout-dashboard"></i> Resumen</a>
+        <a href="#ceo-home-control"><i data-lucide="panels-top-left"></i> Inicio y visual</a>
+        <a href="#ceo-products"><i data-lucide="package"></i> Catálogo</a>
+        <a href="#ceo-activity"><i data-lucide="activity"></i> Actividad</a>
+      </nav>
+
       <!-- SEGURIDAD CEO Y MÉTRICAS DE VISITAS -->
-      <div class="bg-swagDark p-4 rounded-2xl border border-swagLime/30 mb-6 space-y-4">
+      <div id="ceo-overview" class="swag-ceo-card bg-swagDark p-4 md:p-5 rounded-2xl border border-swagLime/30 mb-6 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 class="text-xs font-black uppercase text-swagLime">Estadísticas del sitio</h3>
@@ -254,7 +265,7 @@
       </div>
 
       <!-- GESTIÓN DE CATEGORÍAS Y DESCRIPCIÓN HERO -->
-      <div class="bg-swagDark p-4 rounded-2xl border border-swagLime/30 mb-6 space-y-3">
+      <div id="ceo-home-control" class="swag-ceo-card bg-swagDark p-4 md:p-5 rounded-2xl border border-swagLime/30 mb-6 space-y-3">
         <div class="border-b border-white/10 pb-3 mb-3">
           <label class="text-[10px] text-swagLime font-bold block uppercase mb-1">Editar Descripción Inicio</label>
           <textarea id="editHeroDesc" rows="2" class="w-full bg-swagGray border border-white/10 rounded-xl px-3 py-1.5 text-xs focus:border-swagLime outline-none resize-none mb-2"></textarea>
@@ -262,6 +273,28 @@
           <button onclick="guardarTextosHero()" class="bg-swagLime text-black font-extrabold px-3 py-1.5 rounded-xl uppercase text-[10px] hover:bg-white transition">
             Guardar Descripción de Inicio
           </button>
+        </div>
+
+        <!-- CONTROL INDEPENDIENTE DEL PRODUCTO DESTACADO DEL INICIO -->
+        <div class="swag-ceo-module border-t border-white/10 pt-4 mt-2 space-y-3" id="swagHomeFeatureManager">
+          <div class="flex items-start gap-3">
+            <span class="swag-ceo-module-icon"><i data-lucide="monitor-smartphone"></i></span>
+            <div><h3 class="text-xs font-black uppercase text-swagLime">Producto principal del Inicio</h3>
+            <p class="text-[10px] text-gray-400 mt-1">Cambia la selección visual del hero sin alterar el catálogo. Ejemplo: reemplaza el iPhone por una laptop. La fotografía se elige desde tu dispositivo.</p></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="swag-ceo-label" for="homeFeatureTitle">Nombre destacado</label><input id="homeFeatureTitle" type="text" maxlength="90" placeholder="Ej. Laptop ASUS ROG" class="swag-ceo-input"></div>
+            <div><label class="swag-ceo-label" for="homeFeatureSubtitle">Descripción corta</label><input id="homeFeatureSubtitle" type="text" maxlength="120" placeholder="Ej. Rendimiento para cada desafío" class="swag-ceo-input"></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+            <div><label class="swag-ceo-label" for="homeFeatureFile">Fotografía desde tu dispositivo</label><input id="homeFeatureFile" type="file" accept="image/*" class="swag-ceo-file"><p class="text-[9px] text-gray-500 mt-1">JPG, PNG o WEBP. La imagen se optimiza antes de guardarse.</p></div>
+            <img id="homeFeaturePreview" class="hidden w-28 h-28 rounded-xl object-cover border border-white/10" alt="Vista previa de selección principal">
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="guardarHomeFeature()" class="swag-ceo-primary"><i data-lucide="save"></i> Guardar selección del Inicio</button>
+            <button type="button" onclick="restaurarHomeFeature()" class="swag-ceo-secondary"><i data-lucide="rotate-ccw"></i> Usar producto destacado del catálogo</button>
+          </div>
+          <p id="homeFeatureStatus" class="text-[10px] text-gray-400" aria-live="polite">La selección actual se muestra en la portada.</p>
         </div>
 
         <!-- GESTOR GLOBAL DE TEMAS SWAG -->
@@ -288,6 +321,33 @@
               <span><b>Midnight</b><small>Carbón · Violeta · Cian</small></span>
             </button>
           </div>
+          <div class="swag-palette-builder">
+            <div><h4>Diseñador de paletas ilimitadas</h4><p>Crea combinaciones propias con selectores de color. Puedes guardar tantas paletas como necesites.</p></div>
+            <div class="swag-color-grid">
+              <label>Fondo general<input id="swagColorBg" type="color" value="#080a0b"></label>
+              <label>Paneles<input id="swagColorPanel" type="color" value="#171a1c"></label>
+              <label>Color principal<input id="swagColorAccent" type="color" value="#76ed11"></label>
+              <label>Color secundario<input id="swagColorAccent2" type="color" value="#b5ff72"></label>
+              <label>Texto<input id="swagColorText" type="color" value="#f7f8f5"></label>
+              <label>Texto suave<input id="swagColorMuted" type="color" value="#b8bec2"></label>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input id="swagPaletteName" type="text" maxlength="32" placeholder="Nombre de tu paleta" class="swag-ceo-input flex-1">
+              <button type="button" onclick="guardarPaletaPersonalizada()" class="swag-ceo-primary"><i data-lucide="palette"></i> Guardar paleta</button>
+              <button type="button" onclick="restaurarTemaSWAG()" class="swag-ceo-secondary">Tema original</button>
+            </div>
+            <div id="swagSavedPalettes" class="swag-saved-palettes" aria-live="polite"></div>
+          </div>
+
+          <div class="swag-sound-manager">
+            <div class="flex items-start gap-3"><span class="swag-ceo-module-icon"><i data-lucide="audio-lines"></i></span><div><h4>Audio de la interfaz</h4><p>Sonido sutil al cambiar entre Inicio, Tecnología y Catálogo, además de confirmaciones del panel.</p></div></div>
+            <div class="flex flex-wrap items-center gap-4 mt-3">
+              <label class="swag-sound-toggle"><input id="swagSoundEnabled" type="checkbox" checked onchange="guardarConfiguracionSonido()"> Activar sonidos</label>
+              <label class="swag-sound-volume">Volumen <input id="swagSoundVolume" type="range" min="0" max="100" value="45" oninput="actualizarVolumenSonido(this.value)" onchange="guardarConfiguracionSonido()"><output id="swagSoundVolumeValue">45%</output></label>
+              <button type="button" onclick="reproducirSonido('wheel')" class="swag-ceo-secondary">Probar sonido</button>
+            </div>
+          </div>
+
           <div class="flex flex-wrap items-center gap-3 rounded-xl bg-black/20 border border-white/10 p-3">
             <label class="flex items-center gap-2 text-[10px] font-bold"><input id="swagThemeEffects" type="checkbox" checked onchange="cambiarEfectosTemaSWAG(this.checked)"> Activar animaciones y decoraciones</label>
             <span id="swagThemeStatus" class="text-[10px] text-gray-400" aria-live="polite">Tema actual: SWAG Original</span>
@@ -346,7 +406,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div id="ceo-products" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- FORMULARIO CON 3 FOTOS MÍNIMAS & ESPECIFICACIONES -->
         <div class="bg-swagGray p-5 rounded-2xl border border-white/5">
           <h3 class="text-sm font-bold mb-3 uppercase text-white flex items-center gap-2" id="formTitulo">
@@ -430,7 +490,7 @@
       </div>
 
       <!-- HISTORIAL / LOGS CAJA NEGRA -->
-      <div class="bg-swagDark p-4 rounded-2xl border border-white/10">
+      <div id="ceo-activity" class="swag-ceo-card bg-swagDark p-4 rounded-2xl border border-white/10">
         <div class="flex justify-between items-center mb-2">
           <span class="text-xs font-bold uppercase text-swagLime flex items-center gap-1.5">
             <i data-lucide="activity" class="w-4 h-4"></i> Historial de Actividad (Log Monitor)
@@ -509,6 +569,6 @@
   <button id="swagInstallBtn" type="button" aria-label="Instalar SWAG en este dispositivo">＋ Instalar SWAG</button>
   
 
-<script src="script.js?v=wheel-desktop-20261101"></script>
+<script src="script.js?v=ceo-control-center-20261101-1"></script>
 </body>
 </html>

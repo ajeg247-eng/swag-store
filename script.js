@@ -68,6 +68,7 @@
         window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       }
       document.dispatchEvent(new CustomEvent('swag:pagechange', { detail: { pageId, index: activeIndex } }));
+      if (options.sound !== false && typeof window.reproducirSonido === 'function') window.reproducirSonido('wheel');
       return true;
     }
 
@@ -95,7 +96,7 @@
       if (event.key === 'ArrowRight') { event.preventDefault(); activate(activeIndex + 1); }
     });
 
-    activate(activeIndex, { scroll: false });
+    activate(activeIndex, { scroll: false, sound: false });
     stage?.classList.add('ccm-11_ready');
   }
 
@@ -165,6 +166,9 @@
     const STORAGE_KEY_HERO = "swag_hero_text";
     const STORAGE_KEY_SHOWCASE = "swag_tech_showcase_items";
     const STORAGE_KEY_THEME = "swag_visual_theme";
+    const STORAGE_KEY_PALETTES = "swag_custom_palettes";
+    const STORAGE_KEY_SOUND = "swag_sound_settings";
+    const STORAGE_KEY_HOME_FEATURE = "swag_home_feature";
 
     // Lectura defensiva: un dato local corrupto no debe detener toda la aplicación.
     function leerJSONLocal(key, fallback) {
@@ -177,42 +181,65 @@
       }
     }
 
-    // AUDIO
+    // AUDIO DE INTERFAZ — Web Audio, sin archivos externos.
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
+    let swagSoundData = leerJSONLocal(STORAGE_KEY_SOUND, { enabled: true, volume: 0.45 });
+    if (!swagSoundData || typeof swagSoundData !== "object") swagSoundData = { enabled: true, volume: 0.45 };
+    swagSoundData.enabled = swagSoundData.enabled !== false;
+    swagSoundData.volume = Math.max(0, Math.min(1, Number(swagSoundData.volume ?? 0.45)));
 
     function reproducirSonido(tipo) {
+      if (!swagSoundData.enabled || !AudioCtx || swagSoundData.volume <= 0) return;
       try {
         if (!audioCtx) audioCtx = new AudioCtx();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
         const now = audioCtx.currentTime;
-
-        if (tipo === 'click') {
-          osc.frequency.setValueAtTime(800, now);
-          osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
-          gain.gain.setValueAtTime(0.15, now);
-          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
-          osc.start(now); osc.stop(now + 0.05);
+        const master = Math.min(0.22, swagSoundData.volume * 0.22);
+        const tone = (frequency, endFrequency, startAt, duration, wave = 'sine', peak = 0.35) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = wave;
+          osc.frequency.setValueAtTime(frequency, startAt);
+          if (endFrequency && endFrequency !== frequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, startAt + duration);
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, master * peak), startAt + Math.min(0.018, duration * 0.25));
+          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(startAt); osc.stop(startAt + duration + 0.01);
+        };
+        if (tipo === 'wheel') {
+          // Doble tono limpio, breve y discreto para el cambio de sección.
+          tone(520, 690, now, 0.13, 'sine', 0.42);
+          tone(780, 980, now + 0.045, 0.12, 'sine', 0.24);
+        } else if (tipo === 'click') {
+          tone(760, 470, now, 0.065, 'sine', 0.34);
         } else if (tipo === 'trash') {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(400, now);
-          osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-          osc.start(now); osc.stop(now + 0.2);
+          tone(360, 115, now, 0.19, 'triangle', 0.5);
         } else if (tipo === 'exito') {
-          osc.frequency.setValueAtTime(523.25, now);
-          osc.frequency.setValueAtTime(659.25, now + 0.08);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-          osc.start(now); osc.stop(now + 0.2);
+          tone(523.25, 523.25, now, 0.16, 'sine', 0.42);
+          tone(659.25, 659.25, now + 0.075, 0.18, 'sine', 0.34);
         }
-      } catch (e) {}
+      } catch (e) { console.debug('Audio SWAG no disponible en este navegador.', e); }
     }
+    window.reproducirSonido = reproducirSonido;
+
+    function guardarConfiguracionSonido() {
+      const enabled = document.getElementById('swagSoundEnabled');
+      const volume = document.getElementById('swagSoundVolume');
+      if (enabled) swagSoundData.enabled = enabled.checked;
+      if (volume) swagSoundData.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+      localStorage.setItem(STORAGE_KEY_SOUND, JSON.stringify(swagSoundData));
+      programarGuardadoNube();
+      if (swagSoundData.enabled) reproducirSonido('exito');
+    }
+    function actualizarVolumenSonido(value) {
+      const output = document.getElementById('swagSoundVolumeValue');
+      if (output) output.textContent = `${value}%`;
+      swagSoundData.volume = Math.max(0, Math.min(1, Number(value) / 100));
+    }
+    window.guardarConfiguracionSonido = guardarConfiguracionSonido;
+    window.actualizarVolumenSonido = actualizarVolumenSonido;
 
     // ANIMACIÓN DE SCROLL DINÁMICA (REVEAL/HIDE AL DESLIZAR)
     window.addEventListener('scroll', () => {
@@ -240,35 +267,98 @@
       original:{name:"SWAG Original",effects:false},
       navidad:{name:"Navidad",effects:true},
       "ano-nuevo":{name:"Año Nuevo",effects:true},
-      noche:{name:"Midnight",effects:false}
+      noche:{name:"Midnight",effects:false},
+      custom:{name:"Personalizado",effects:false}
     };
-    let swagThemeData = {id:"original",effects:false};
+    let swagThemeData = {id:"original",effects:false,palette:null};
     try { const savedTheme=JSON.parse(localStorage.getItem(STORAGE_KEY_THEME)||"null"); if(savedTheme && SWAG_THEMES[savedTheme.id]) swagThemeData={...swagThemeData,...savedTheme}; } catch(e){}
+    let swagCustomPalettes = leerJSONLocal(STORAGE_KEY_PALETTES, []);
+    if (!Array.isArray(swagCustomPalettes)) swagCustomPalettes = [];
+    const SWAG_DEFAULT_PALETTE = {bg:"#080a0b",panel:"#171a1c",accent:"#76ed11",accent2:"#b5ff72",text:"#f7f8f5",muted:"#b8bec2"};
+    function leerPaletaDesdeControles(){
+      const get=id=>document.getElementById(id)?.value;
+      return {bg:get('swagColorBg')||SWAG_DEFAULT_PALETTE.bg,panel:get('swagColorPanel')||SWAG_DEFAULT_PALETTE.panel,accent:get('swagColorAccent')||SWAG_DEFAULT_PALETTE.accent,accent2:get('swagColorAccent2')||SWAG_DEFAULT_PALETTE.accent2,text:get('swagColorText')||SWAG_DEFAULT_PALETTE.text,muted:get('swagColorMuted')||SWAG_DEFAULT_PALETTE.muted};
+    }
+    function pintarControlesPaleta(palette){
+      if(!palette)return;
+      const map={swagColorBg:'bg',swagColorPanel:'panel',swagColorAccent:'accent',swagColorAccent2:'accent2',swagColorText:'text',swagColorMuted:'muted'};
+      Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.value=palette[key]||SWAG_DEFAULT_PALETTE[key];});
+    }
     function aplicarTemaSWAG(){
       const id=SWAG_THEMES[swagThemeData.id]?swagThemeData.id:"original";
       document.body.dataset.swagTheme=id;
+      if(id==='custom' && swagThemeData.palette){
+        const p=swagThemeData.palette;
+        const vars={bg:'--swag-theme-bg',panel:'--swag-theme-panel',accent:'--swag-theme-accent',accent2:'--swag-theme-accent2',text:'--swag-theme-text',muted:'--swag-theme-muted'};
+        Object.entries(vars).forEach(([key,cssVar])=>document.body.style.setProperty(cssVar,p[key]||SWAG_DEFAULT_PALETTE[key]));
+        document.body.style.setProperty('--swag-theme-border',p.accent2||SWAG_DEFAULT_PALETTE.accent2);
+        document.body.style.setProperty('--swag-theme-button-text',contrasteColor(p.accent||SWAG_DEFAULT_PALETTE.accent));
+      } else {
+        ['--swag-theme-bg','--swag-theme-panel','--swag-theme-accent','--swag-theme-accent2','--swag-theme-text','--swag-theme-muted','--swag-theme-border','--swag-theme-button-text'].forEach(v=>document.body.style.removeProperty(v));
+      }
       document.body.classList.toggle("swag-effects-on",!!swagThemeData.effects);
       const fx=document.getElementById("swagSeasonFx");
-      if(fx){fx.className=(id==="navidad" && swagThemeData.effects)?"snow":"";}
+      if(fx){fx.className=(id==="navidad" && swagThemeData.effects)?"snow":(id==="ano-nuevo"&&swagThemeData.effects?"newyear":"");}
       const toggle=document.getElementById("swagThemeEffects"); if(toggle) toggle.checked=!!swagThemeData.effects;
       const status=document.getElementById("swagThemeStatus"); if(status) status.textContent="Tema actual: "+SWAG_THEMES[id].name;
       document.querySelectorAll("[data-theme-choice]").forEach(b=>b.classList.toggle("is-active",b.dataset.themeChoice===id));
+      if(id==='custom' && swagThemeData.palette) pintarControlesPaleta(swagThemeData.palette);
+    }
+    function contrasteColor(hex){
+      const c=String(hex||'#76ed11').replace('#',''); if(!/^[0-9a-f]{6}$/i.test(c))return '#071006';
+      const n=parseInt(c,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+      return (0.299*r+0.587*g+0.114*b)>155?'#101010':'#ffffff';
     }
     function guardarTemaSWAG(){
-      localStorage.setItem(STORAGE_KEY_THEME,JSON.stringify(swagThemeData));
-      aplicarTemaSWAG();
+      localStorage.setItem(STORAGE_KEY_THEME,JSON.stringify(swagThemeData)); aplicarTemaSWAG();
       if(typeof programarGuardadoNube==="function") programarGuardadoNube();
     }
     function seleccionarTemaSWAG(id){
       if(!SWAG_THEMES[id]) return;
       swagThemeData.id=id;
-      if(id==="original" || id==="noche") swagThemeData.effects=false;
+      if(id==="original" || id==="noche" || id==='custom') swagThemeData.effects=false;
       else swagThemeData.effects=true;
+      if(id==='custom' && !swagThemeData.palette) swagThemeData.palette={...SWAG_DEFAULT_PALETTE};
       guardarTemaSWAG();
       if(typeof reproducirSonido==="function") reproducirSonido("exito");
       if(typeof registrarLog==="function") registrarLog("Tema visual cambiado a "+SWAG_THEMES[id].name+".");
     }
     function cambiarEfectosTemaSWAG(enabled){swagThemeData.effects=!!enabled;guardarTemaSWAG();}
+    function guardarPaletaPersonalizada(){
+      const name=document.getElementById('swagPaletteName')?.value.trim()||`Paleta ${swagCustomPalettes.length+1}`;
+      const palette=leerPaletaDesdeControles();
+      const entry={id:Date.now(),name,palette};
+      swagCustomPalettes.unshift(entry);
+      localStorage.setItem(STORAGE_KEY_PALETTES,JSON.stringify(swagCustomPalettes));
+      swagThemeData={...swagThemeData,id:'custom',effects:false,palette}; guardarTemaSWAG(); renderizarPaletasGuardadas();
+      const nameInput=document.getElementById('swagPaletteName');if(nameInput)nameInput.value='';
+      registrarLog(`Nueva paleta guardada: ${name}`); reproducirSonido('exito');
+    }
+    function aplicarPaletaGuardada(id){
+      const entry=swagCustomPalettes.find(p=>String(p.id)===String(id));if(!entry)return;
+      swagThemeData={...swagThemeData,id:'custom',effects:false,palette:entry.palette}; guardarTemaSWAG();
+      pintarControlesPaleta(entry.palette); registrarLog(`Paleta aplicada: ${entry.name}`);
+    }
+    function eliminarPaletaGuardada(id){
+      const entry=swagCustomPalettes.find(p=>String(p.id)===String(id));if(!entry||!confirm(`¿Eliminar la paleta \"${entry.name}\"?`))return;
+      swagCustomPalettes=swagCustomPalettes.filter(p=>String(p.id)!==String(id));localStorage.setItem(STORAGE_KEY_PALETTES,JSON.stringify(swagCustomPalettes));renderizarPaletasGuardadas();programarGuardadoNube();
+    }
+    function renderizarPaletasGuardadas(){
+      const host=document.getElementById('swagSavedPalettes');if(!host)return;host.innerHTML='';
+      if(!swagCustomPalettes.length){host.innerHTML='<p class="text-[10px] text-gray-500">Aún no hay paletas guardadas.</p>';return;}
+      swagCustomPalettes.forEach(entry=>{
+        const row=document.createElement('div');row.className='swag-palette-chip';
+        const dots=document.createElement('span');dots.className='swag-palette-dots';
+        ['bg','panel','accent','accent2'].forEach(k=>{const dot=document.createElement('i');dot.style.background=entry.palette[k];dots.appendChild(dot);});
+        const name=document.createElement('strong');name.textContent=entry.name;
+        const apply=document.createElement('button');apply.type='button';apply.textContent='Aplicar';apply.onclick=()=>aplicarPaletaGuardada(entry.id);
+        const del=document.createElement('button');del.type='button';del.textContent='×';del.setAttribute('aria-label','Eliminar paleta');del.onclick=()=>eliminarPaletaGuardada(entry.id);
+        row.append(dots,name,apply,del);host.appendChild(row);
+      });
+    }
+    function restaurarTemaSWAG(){swagThemeData={id:'original',effects:false,palette:null};guardarTemaSWAG();pintarControlesPaleta(SWAG_DEFAULT_PALETTE);registrarLog('Tema original SWAG restaurado.');}
+    window.seleccionarTemaSWAG=seleccionarTemaSWAG;window.cambiarEfectosTemaSWAG=cambiarEfectosTemaSWAG;
+    window.guardarPaletaPersonalizada=guardarPaletaPersonalizada;window.aplicarPaletaGuardada=aplicarPaletaGuardada;window.eliminarPaletaGuardada=eliminarPaletaGuardada;window.restaurarTemaSWAG=restaurarTemaSWAG;
 
     let heroTextData = leerJSONLocal(STORAGE_KEY_HERO, {
       titulo: "Tu tienda de [palabra automática]",
@@ -293,6 +383,40 @@
     } catch (err) { showcaseItems = defaultShowcaseItems; }
     let showcaseEditId = null;
     let showcasePendingImage = "";
+    let homeFeature = leerJSONLocal(STORAGE_KEY_HOME_FEATURE, null);
+    if (!homeFeature || typeof homeFeature !== 'object' || Array.isArray(homeFeature)) homeFeature = null;
+    let homeFeaturePendingImage = "";
+
+    function renderizarHomeFeatureAdmin(){
+      const title=document.getElementById('homeFeatureTitle'),subtitle=document.getElementById('homeFeatureSubtitle'),preview=document.getElementById('homeFeaturePreview'),status=document.getElementById('homeFeatureStatus');
+      if(title)title.value=homeFeature?.title||'';if(subtitle)subtitle.value=homeFeature?.subtitle||'';
+      if(preview){if(homeFeature?.image){preview.src=homeFeature.image;preview.classList.remove('hidden');}else preview.classList.add('hidden');}
+      if(status)status.textContent=homeFeature?'Selección personalizada activa en la portada.':'La portada utiliza automáticamente el primer producto del catálogo.';
+    }
+    async function guardarHomeFeature(){
+      const title=document.getElementById('homeFeatureTitle')?.value.trim()||'';
+      const subtitle=document.getElementById('homeFeatureSubtitle')?.value.trim()||'';
+      const file=document.getElementById('homeFeatureFile')?.files?.[0];
+      if(!title){alert('Escribe el nombre del producto que aparecerá en Inicio.');return;}
+      let image=homeFeaturePendingImage||homeFeature?.image||'';
+      if(file){try{image=await optimizarImagenShowcase(file);}catch(err){alert(err.message);return;}}
+      if(!image){alert('Selecciona una fotografía desde tu dispositivo.');return;}
+      homeFeature={title,subtitle,image};
+      try{localStorage.setItem(STORAGE_KEY_HOME_FEATURE,JSON.stringify(homeFeature));}
+      catch(err){alert('No se pudo guardar la imagen. Prueba con una fotografía más pequeña.');return;}
+      homeFeaturePendingImage='';const fileInput=document.getElementById('homeFeatureFile');if(fileInput)fileInput.value='';
+      renderizarInicio();renderizarHomeFeatureAdmin();programarGuardadoNube();registrarLog(`Selección principal del Inicio actualizada: ${title}`);reproducirSonido('exito');
+    }
+    function restaurarHomeFeature(){
+      if(!confirm('¿Volver a mostrar automáticamente el primer producto del catálogo en Inicio?'))return;
+      homeFeature=null;homeFeaturePendingImage='';localStorage.removeItem(STORAGE_KEY_HOME_FEATURE);
+      const file=document.getElementById('homeFeatureFile');if(file)file.value='';renderizarInicio();renderizarHomeFeatureAdmin();programarGuardadoNube();registrarLog('Selección principal del Inicio restaurada al catálogo.');
+    }
+    window.guardarHomeFeature=guardarHomeFeature;window.restaurarHomeFeature=restaurarHomeFeature;
+    document.addEventListener('DOMContentLoaded',()=>{
+      const input=document.getElementById('homeFeatureFile');
+      input?.addEventListener('change',async()=>{const file=input.files?.[0];if(!file)return;try{homeFeaturePendingImage=await optimizarImagenShowcase(file);const preview=document.getElementById('homeFeaturePreview');if(preview){preview.src=homeFeaturePendingImage;preview.classList.remove('hidden');}}catch(err){alert(err.message);input.value='';}});
+    });
 
     function guardarShowcaseStorage() {
       try {
@@ -424,7 +548,7 @@
       });
     });
 
-    // TITULAR ROTATORIO DEL HERO — fácil de editar
+    // TITULAR ROTATORIO DEL HERO — legible, adaptable y estable al hacer scroll
     const HERO_ROTATOR_WORDS = [
       "celulares",
       "tablets",
@@ -439,61 +563,121 @@
     ];
     let heroRotatorInterval = null;
     let heroRotatorTransition = null;
-    function iniciarRotadorHero(){
+    let heroRotatorIndex = 0;
+    let heroRotatorObserver = null;
+    let heroRotatorVisible = true;
+    let heroRotatorResizeObserver = null;
+
+    function ajustarPalabraHero(){
+      const title = document.getElementById("heroTituloText");
+      const wordEl = document.getElementById("heroRotatorWord");
+      if (!title || !wordEl) return;
+      const titleWidth = Math.max(120, title.clientWidth || title.getBoundingClientRect().width);
+      const titleFont = parseFloat(getComputedStyle(title).fontSize) || 48;
+      const baseSize = titleFont * 0.82;
+      let low = baseSize * 0.52;
+      let high = baseSize;
+      wordEl.style.fontSize = `${baseSize}px`;
+      // Busca el tamaño más grande que permita mostrar la palabra completa sin cortar letras.
+      for (let i = 0; i < 14; i++) {
+        const mid = (low + high) / 2;
+        wordEl.style.fontSize = `${mid}px`;
+        if (wordEl.getBoundingClientRect().width <= titleWidth - 2) low = mid;
+        else high = mid;
+      }
+      wordEl.style.fontSize = `${Math.max(baseSize * 0.52, low)}px`;
+    }
+
+    function detenerRotadorHero(){
       if (heroRotatorInterval !== null) clearInterval(heroRotatorInterval);
       if (heroRotatorTransition !== null) clearTimeout(heroRotatorTransition);
       heroRotatorInterval = null;
       heroRotatorTransition = null;
+      const current = document.getElementById("heroRotatorWord");
+      if (current) current.classList.remove("is-leaving", "is-entering");
+    }
+
+    function iniciarRotadorHero(){
+      detenerRotadorHero();
       const wordEl = document.getElementById("heroRotatorWord");
-      if (!wordEl) return;
+      const title = document.getElementById("heroTituloText");
+      if (!wordEl || !title || !HERO_ROTATOR_WORDS.length) return;
       const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let currentIndex = 0;
-      wordEl.textContent = HERO_ROTATOR_WORDS[0];
+      wordEl.textContent = HERO_ROTATOR_WORDS[heroRotatorIndex % HERO_ROTATOR_WORDS.length];
+      ajustarPalabraHero();
       if (reduceMotion) return;
 
+      if (heroRotatorResizeObserver) heroRotatorResizeObserver.disconnect();
+      if ("ResizeObserver" in window) {
+        heroRotatorResizeObserver = new ResizeObserver(ajustarPalabraHero);
+        heroRotatorResizeObserver.observe(title);
+      } else {
+        window.addEventListener("resize", ajustarPalabraHero, { passive:true });
+      }
+
       function cambiarPalabra(){
-        if (document.hidden || !HERO_ROTATOR_WORDS.length) return;
-        wordEl.classList.add("is-leaving");
-        wordEl.classList.remove("is-entering");
+        if (document.hidden || !heroRotatorVisible) return;
+        const current = document.getElementById("heroRotatorWord");
+        if (!current || !current.isConnected) return;
+        current.classList.add("is-leaving");
         heroRotatorTransition = setTimeout(() => {
-          currentIndex = (currentIndex + 1) % HERO_ROTATOR_WORDS.length;
-          wordEl.textContent = HERO_ROTATOR_WORDS[currentIndex];
-          wordEl.classList.remove("is-leaving");
-          wordEl.classList.add("is-entering");
-          requestAnimationFrame(() => requestAnimationFrame(() => wordEl.classList.remove("is-entering")));
+          const visibleWord = document.getElementById("heroRotatorWord");
+          if (!visibleWord) { heroRotatorTransition = null; return; }
+          heroRotatorIndex = (heroRotatorIndex + 1) % HERO_ROTATOR_WORDS.length;
+          visibleWord.textContent = HERO_ROTATOR_WORDS[heroRotatorIndex];
+          visibleWord.classList.remove("is-leaving");
+          visibleWord.classList.add("is-entering");
+          ajustarPalabraHero();
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const latest = document.getElementById("heroRotatorWord");
+            latest?.classList.remove("is-entering");
+          }));
           heroRotatorTransition = null;
-        }, 300);
+        }, 420);
       }
-      function iniciar(){
+
+      function iniciarIntervalo(){
         if (heroRotatorInterval !== null) clearInterval(heroRotatorInterval);
-        if (!document.hidden) heroRotatorInterval = setInterval(cambiarPalabra, 2300);
+        heroRotatorInterval = null;
+        if (!document.hidden && heroRotatorVisible) {
+          heroRotatorInterval = setInterval(cambiarPalabra, 3400);
+        }
       }
+
       if (!window.swagHeroRotatorVisibilityHandler) {
         window.swagHeroRotatorVisibilityHandler = () => {
-          if (document.hidden) {
-            if (heroRotatorInterval !== null) clearInterval(heroRotatorInterval);
-            heroRotatorInterval = null;
-            if (heroRotatorTransition !== null) clearTimeout(heroRotatorTransition);
-            heroRotatorTransition = null;
-            const current = document.getElementById("heroRotatorWord");
-            if (current) current.classList.remove("is-leaving", "is-entering");
-          } else iniciar();
+          if (document.hidden) detenerRotadorHero();
+          else iniciarIntervalo();
         };
         document.addEventListener("visibilitychange", window.swagHeroRotatorVisibilityHandler);
       }
-      iniciar();
+      if (!heroRotatorObserver && "IntersectionObserver" in window) {
+        heroRotatorObserver = new IntersectionObserver(entries => {
+          heroRotatorVisible = Boolean(entries[0]?.isIntersecting);
+          if (heroRotatorVisible) iniciarIntervalo();
+          else detenerRotadorHero();
+          // No se modifica el texto al salir de pantalla: al volver sigue visible.
+          ajustarPalabraHero();
+        }, { threshold:0.12 });
+        heroRotatorObserver.observe(title);
+      }
+      iniciarIntervalo();
     }
 
     function renderizarTextosHero() {
       const title = document.getElementById('heroTituloText');
       const desc = document.getElementById('heroDescText');
       if (title) {
-        title.innerHTML = 'Tu tienda de <span id="heroRotatorWord" class="hero-rotator-word" aria-live="polite">celulares</span>.';
+        let word = document.getElementById('heroRotatorWord');
+        if (!word) {
+          title.innerHTML = 'Tu tienda de <span id="heroRotatorWord" class="hero-rotator-word" aria-live="polite">celulares</span>.';
+        } else {
+          // Mantiene el mismo nodo para que el intervalo no apunte a un elemento eliminado.
+          word.textContent = HERO_ROTATOR_WORDS[heroRotatorIndex % HERO_ROTATOR_WORDS.length];
+        }
       }
       const inputDesc = document.getElementById('editHeroDesc');
       if (inputDesc) inputDesc.value = heroTextData.desc;
-      // El render puede reemplazar el span (por ejemplo, al sincronizar Supabase).
-      // Reiniciar aquí asegura que el intervalo siempre controle el elemento visible.
       iniciarRotadorHero();
     }
 
@@ -505,9 +689,8 @@
       localStorage.setItem(STORAGE_KEY_HERO, JSON.stringify(heroTextData));
       programarGuardadoNube();
       renderizarTextosHero();
-      iniciarRotadorHero();
       reproducirSonido('exito');
-      registrarLog("Textos principales de la página de inicio actualizados.");
+      registrarLog("Texto descriptivo de la página de inicio actualizado.");
     }
 
     // CARGA DE CATEGORÍAS PERSISTENTES
@@ -554,7 +737,7 @@
     if (!Array.isArray(logsCajaNegra)) logsCajaNegra = [];
 
     function obtenerEstadoSWAG() {
-      return { categorias: listaCategorias, productos, logs: logsCajaNegra, hero: heroTextData, showcase: showcaseItems, theme: swagThemeData };
+      return { categorias: listaCategorias, productos, logs: logsCajaNegra, hero: heroTextData, showcase: showcaseItems, theme: swagThemeData, palettes: swagCustomPalettes, sound: swagSoundData, homeFeature };
     }
     function guardarEstadoCompleto() {
       localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
@@ -582,12 +765,18 @@
       if (d.hero && typeof d.hero === "object") heroTextData = d.hero;
       if (Array.isArray(d.showcase)) showcaseItems = d.showcase;
       if (d.theme && typeof d.theme === "object" && SWAG_THEMES[d.theme.id]) swagThemeData = { ...swagThemeData, ...d.theme };
+      if (Array.isArray(d.palettes)) swagCustomPalettes = d.palettes;
+      if (d.sound && typeof d.sound === 'object') swagSoundData = { ...swagSoundData, ...d.sound };
+      if (d.homeFeature === null || (d.homeFeature && typeof d.homeFeature === 'object')) homeFeature = d.homeFeature;
       localStorage.setItem(STORAGE_KEY_THEME, JSON.stringify(swagThemeData));
       localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
       localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos));
       localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logsCajaNegra));
       localStorage.setItem(STORAGE_KEY_HERO, JSON.stringify(heroTextData));
       localStorage.setItem(STORAGE_KEY_SHOWCASE, JSON.stringify(showcaseItems));
+      localStorage.setItem(STORAGE_KEY_PALETTES, JSON.stringify(swagCustomPalettes));
+      localStorage.setItem(STORAGE_KEY_SOUND, JSON.stringify(swagSoundData));
+      if(homeFeature) localStorage.setItem(STORAGE_KEY_HOME_FEATURE, JSON.stringify(homeFeature)); else localStorage.removeItem(STORAGE_KEY_HOME_FEATURE);
       aplicarTemaSWAG();
       renderizarTextosHero(); renderizarCategorias(); renderizarProductos(); renderizarInicio();
       if (typeof renderizarEscaparate3DCards === "function") renderizarEscaparate3DCards();
@@ -872,10 +1061,21 @@
         });
       }
       const featured = (Array.isArray(productos) ? productos : []).slice(0, 3);
-      if (featured.length && heroImage && heroName) {
-        const p = featured[0]; const photo = p.fotos?.[p.portadaIndex] || p.fotos?.[0];
-        if (photo) heroImage.src = photo;
-        heroName.textContent = p.nombre || "Producto destacado";
+      if (heroImage && heroName) {
+        if (homeFeature?.image) {
+          heroImage.src = homeFeature.image;
+          heroImage.alt = homeFeature.title || 'Producto destacado de SWAG';
+          heroName.textContent = homeFeature.title || 'Producto destacado';
+          const captionSmall=document.querySelector('.swag-visual-caption small');
+          if(captionSmall)captionSmall.textContent=homeFeature.subtitle||'Una selección especial de SWAG.';
+        } else if (featured.length) {
+          const p = featured[0]; const photo = p.fotos?.[p.portadaIndex] || p.fotos?.[0];
+          if (photo) heroImage.src = photo;
+          heroImage.alt = p.nombre || 'Producto destacado';
+          heroName.textContent = p.nombre || "Producto destacado";
+          const captionSmall=document.querySelector('.swag-visual-caption small');
+          if(captionSmall)captionSmall.textContent='Explora el catálogo y encuentra tu próximo favorito.';
+        }
       }
       if (featuredHost) {
         featuredHost.innerHTML = "";
@@ -903,6 +1103,12 @@
       renderizarListaShowcase();
       renderizarLogs();
       renderizarEstadisticasVisitas();
+      renderizarPaletasGuardadas();
+      pintarControlesPaleta(swagThemeData.palette || SWAG_DEFAULT_PALETTE);
+      renderizarHomeFeatureAdmin();
+      const soundToggle=document.getElementById('swagSoundEnabled');if(soundToggle)soundToggle.checked=!!swagSoundData.enabled;
+      const soundRange=document.getElementById('swagSoundVolume');if(soundRange)soundRange.value=Math.round(swagSoundData.volume*100);
+      const soundOutput=document.getElementById('swagSoundVolumeValue');if(soundOutput)soundOutput.textContent=`${Math.round(swagSoundData.volume*100)}%`;
     }
     async function cerrarAdmin() { document.getElementById('adminSection').classList.add('hidden'); if (swagDb?.auth) await swagDb.auth.signOut(); swagAdminSession = null; }
 
