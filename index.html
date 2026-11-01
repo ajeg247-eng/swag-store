@@ -43,7 +43,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
 
-<link rel="stylesheet" href="styles.css?v=nosotros-20261102-1">
+<link rel="stylesheet" href="styles.css?v=ceo-command-hierarchy-audio-20261101-1">
 </head>
 <body class="bg-swagDark text-white min-h-screen flex flex-col font-sans selection:bg-swagLime selection:text-black" data-swag-theme="original">
   <div id="swagSeasonFx" aria-hidden="true"></div>
@@ -302,17 +302,8 @@
         <p class="text-[9px] text-gray-500">Nota: estas visitas se guardan localmente. Para contar visitantes de todos los dispositivos y ver estadísticas reales centralizadas, el sitio necesita una base de datos o servicio de analítica conectado.</p>
       </div>
 
-      <!-- GESTIÓN DE CATEGORÍAS Y DESCRIPCIÓN HERO -->
+      <!-- GESTIÓN DE INICIO: producto destacado y apariencia -->
       <div id="ceo-home-control" class="swag-ceo-card bg-swagDark p-4 md:p-5 rounded-2xl border border-swagLime/30 mb-6 space-y-3">
-        <div class="border-b border-white/10 pb-3 mb-3">
-          <label class="text-[10px] text-swagLime font-bold block uppercase mb-1">Editar Descripción Inicio</label>
-          <textarea id="editHeroDesc" rows="2" class="w-full bg-swagGray border border-white/10 rounded-xl px-3 py-1.5 text-xs focus:border-swagLime outline-none resize-none mb-2"></textarea>
-
-          <button onclick="guardarTextosHero()" class="bg-swagLime text-black font-extrabold px-3 py-1.5 rounded-xl uppercase text-[10px] hover:bg-white transition">
-            Guardar Descripción de Inicio
-          </button>
-        </div>
-
         <!-- CONTROL INDEPENDIENTE DEL PRODUCTO DESTACADO DEL INICIO -->
         <div class="swag-ceo-module border-t border-white/10 pt-4 mt-2 space-y-3" id="swagHomeFeatureManager">
           <div class="flex items-start gap-3">
@@ -381,7 +372,7 @@
             <div class="flex items-start gap-3"><span class="swag-ceo-module-icon"><i data-lucide="audio-lines"></i></span><div><h4>Audio de la interfaz</h4><p>Sonido sutil al cambiar entre Inicio, Tecnología y Catálogo, además de confirmaciones del panel.</p></div></div>
             <div class="flex flex-wrap items-center gap-4 mt-3">
               <label class="swag-sound-toggle"><input id="swagSoundEnabled" type="checkbox" checked onchange="guardarConfiguracionSonido()"> Activar sonidos</label>
-              <label class="swag-sound-volume">Volumen <input id="swagSoundVolume" type="range" min="0" max="100" value="45" oninput="actualizarVolumenSonido(this.value)" onchange="guardarConfiguracionSonido()"><output id="swagSoundVolumeValue">45%</output></label>
+              <label class="swag-sound-volume">Volumen <input id="swagSoundVolume" type="range" min="0" max="100" value="72" oninput="actualizarVolumenSonido(this.value)" onchange="guardarConfiguracionSonido()"><output id="swagSoundVolumeValue">72%</output></label>
               <button type="button" onclick="reproducirSonido('wheel')" class="swag-ceo-secondary">Probar sonido</button>
             </div>
           </div>
@@ -524,6 +515,7 @@
               </button>
             </div>
           </form>
+          <div id="productoSaveStatus" class="hidden" role="status" aria-live="polite"></div>
         </div>
 
         <div class="bg-swagGray p-5 rounded-2xl border border-white/5 flex flex-col">
@@ -614,6 +606,6 @@
   <button id="swagInstallBtn" type="button" aria-label="Instalar SWAG en este dispositivo">＋ Instalar SWAG</button>
   
 
-<script src="script.js?v=ceo-login-catalog-budget-20261102-1"></script>
+<script src="script.js?v=ceo-command-hierarchy-audio-20261101-1"></script>
 </body>
 </html>

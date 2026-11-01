@@ -600,3 +600,78 @@
 .swag-about-thanks h2{position:relative;margin:16px 0;color:#f5f7f2;font-size:clamp(27px,4vw,44px);font-weight:950;line-height:1.08;letter-spacing:-.05em;text-transform:uppercase}
 .swag-about-thanks p{position:relative;max-width:790px;margin:0 auto;color:#b1bbb0;font-size:13px;line-height:1.95}.swag-about-thanks strong{display:block;margin-top:22px;color:#8ef92d;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 @media(max-width:760px){.swag-about-hero{min-height:0;padding:30px 22px}.swag-about-stamp{right:18px;top:22px;transform:scale(.62) rotate(8deg);transform-origin:top right;opacity:.55}.swag-about-hero-copy{max-width:100%}.swag-about-hero h1{max-width:90%;font-size:clamp(31px,8vw,48px)}.swag-about-hero-copy>p{font-size:13px}.swag-about-values{grid-template-columns:1fr;gap:10px}.swag-about-value{min-height:0;padding:20px}.swag-about-shipping{align-items:flex-start;flex-wrap:wrap;gap:14px}.swag-about-shipping>div:nth-child(2){flex:1 1 calc(100% - 75px)}.swag-about-shipping .swag-home-primary{width:100%;justify-content:center}}
+
+
+/* SWAG CEO — contraste accesible y formularios de producto */
+#adminSection #ceo-products > div { color:#1b2937 !important; }
+#adminSection #ceo-products h3,
+#adminSection #ceo-products h3 *,
+#adminSection #ceo-products label,
+#adminSection #ceo-products .text-gray-400,
+#adminSection #ceo-products .text-gray-300 { color:#344456 !important; }
+#adminSection #ceo-products .text-white,
+#adminSection #ceo-products .text-white * { color:#17212b !important; }
+#adminSection #ceo-products .text-swagLime { color:#36751c !important; }
+#adminSection #ceo-products .bg-swagDark { background:#eef2f6 !important; color:#263443 !important; }
+#adminSection #ceo-products .bg-swagDark .text-white,
+#adminSection #ceo-products .bg-swagDark .text-white * { color:#17212b !important; }
+#adminSection #ceo-products input[type="file"] { color:#344456 !important; background:#fff !important; }
+#adminSection #ceo-products input[type="file"]::file-selector-button { background:#8ef92d !important; color:#10200b !important; border:0 !important; border-radius:7px !important; padding:5px 9px !important; font-weight:800 !important; }
+#adminSection #ceo-products button[type="submit"] { color:#10200b !important; background:#8ef92d !important; }
+#adminSection #ceo-products button[type="button"] { color:#fff !important; background:#344456 !important; }
+#adminSection #ceo-products input:focus,
+#adminSection #ceo-products select:focus,
+#adminSection #ceo-products textarea:focus { outline:2px solid rgba(54,117,28,.28) !important; outline-offset:1px; }
+#productoSaveStatus { line-height:1.5; font-weight:700; }
+#ceo-products button[disabled] { opacity:.65; cursor:wait; }
+
+
+/* ==========================================================
+   SWAG CEO // INTELLIGENCE OPERATIONS LAYOUT
+   Reorganiza visualmente el panel sin retirar módulos ni acciones.
+   ========================================================== */
+@media (min-width: 900px){
+  #adminSection .swag-ceo-shell{position:relative;min-height:calc(100vh - 56px);}
+  #adminSection .swag-ceo-nav{
+    float:left!important;display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;width:208px!important;max-width:208px!important;
+    min-height:calc(100vh - 230px);height:max-content;position:sticky!important;
+    top:18px!important;margin:0 24px 22px 0!important;padding:12px!important;
+    background:linear-gradient(180deg,#101b27,#0b131d)!important;
+    border:1px solid rgba(142,249,45,.2)!important;border-radius:16px!important;
+    box-shadow:0 18px 36px rgba(0,0,0,.24)!important;
+  }
+  #adminSection .swag-ceo-nav::before{
+    content:'OPERACIONES';display:block;padding:5px 10px 12px;color:#8293a4;
+    font-size:9px;font-weight:900;letter-spacing:.2em;
+  }
+  #adminSection .swag-ceo-nav a{width:100%;min-height:43px;justify-content:flex-start;padding:12px!important;border-radius:10px!important;font-size:10px!important;}
+  #adminSection #ceo-overview,
+  #adminSection #ceo-home-control,
+  #adminSection #ceo-products,
+  #adminSection #ceo-activity{margin-left:232px!important;width:auto!important;}
+  #adminSection #ceo-overview{min-height:148px;}
+  #adminSection .swag-ceo-card{margin-bottom:18px!important;}
+}
+#adminSection .swag-ceo-shell{isolation:isolate;}
+#adminSection .swag-ceo-shell>div:first-child{position:relative;}
+#adminSection .swag-ceo-shell>div:first-child::after{
+  content:'SECURE ADMINISTRATION  •  SWAG NETWORK';display:block;margin-top:9px;
+  color:#7f91a3;font-size:8px;font-weight:800;letter-spacing:.17em;
+}
+#adminSection .swag-ceo-nav a{transition:background .2s ease,color .2s ease,transform .2s ease;}
+#adminSection .swag-ceo-nav a:hover{transform:translateX(2px);}
+#adminSection .swag-ceo-card h3{line-height:1.45;}
+#adminSection .swag-ceo-card label,
+#adminSection .swag-ceo-card .swag-ceo-label{line-height:1.5;}
+#adminSection .swag-ceo-card input::placeholder,
+#adminSection .swag-ceo-card textarea::placeholder{color:#718096!important;opacity:1;}
+#adminSection .swag-ceo-card button:focus-visible,
+#adminSection .swag-ceo-nav a:focus-visible,
+#adminSection .swag-ceo-card input:focus-visible,
+#adminSection .swag-ceo-card select:focus-visible,
+#adminSection .swag-ceo-card textarea:focus-visible{outline:2px solid #8ef92d!important;outline-offset:2px!important;}
+@media(max-width:899px){
+  #adminSection .swag-ceo-nav{float:none!important;width:100%!important;max-width:100%!important;min-height:0!important;}
+  #adminSection #ceo-overview,#adminSection #ceo-home-control,#adminSection #ceo-products,#adminSection #ceo-activity{margin-left:0!important;width:100%!important;}
+}

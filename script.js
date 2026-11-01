@@ -192,10 +192,10 @@
     // AUDIO DE INTERFAZ — Web Audio, sin archivos externos.
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
-    let swagSoundData = leerJSONLocal(STORAGE_KEY_SOUND, { enabled: true, volume: 0.45 });
-    if (!swagSoundData || typeof swagSoundData !== "object") swagSoundData = { enabled: true, volume: 0.45 };
+    let swagSoundData = leerJSONLocal(STORAGE_KEY_SOUND, { enabled: true, volume: 0.72 });
+    if (!swagSoundData || typeof swagSoundData !== "object") swagSoundData = { enabled: true, volume: 0.72 };
     swagSoundData.enabled = swagSoundData.enabled !== false;
-    swagSoundData.volume = Math.max(0, Math.min(1, Number(swagSoundData.volume ?? 0.45)));
+    swagSoundData.volume = Math.max(0, Math.min(1, Number(swagSoundData.volume ?? 0.72)));
 
     function reproducirSonido(tipo) {
       if (!swagSoundData.enabled || !AudioCtx || swagSoundData.volume <= 0) return;
@@ -204,7 +204,8 @@
         const ejecutarTono = () => {
           if (!audioCtx) return;
           const now = audioCtx.currentTime;
-          const master = Math.min(0.22, swagSoundData.volume * 0.22);
+          const normalizedVolume = Math.pow(Math.max(0, Math.min(1, swagSoundData.volume)), 0.62);
+          const master = Math.min(0.78, normalizedVolume * 0.78);
           const tone = (frequency, endFrequency, startAt, duration, wave = 'sine', peak = 0.35) => {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -219,8 +220,8 @@
           };
           if (tipo === 'wheel') {
             // Doble tono limpio, breve y discreto al cambiar de página.
-            tone(520, 690, now, 0.13, 'sine', 0.42);
-            tone(780, 980, now + 0.045, 0.12, 'sine', 0.24);
+            tone(520, 690, now, 0.16, 'triangle', 0.62);
+            tone(780, 980, now + 0.045, 0.15, 'sine', 0.42);
           } else if (tipo === 'click') {
             tone(760, 470, now, 0.065, 'sine', 0.34);
           } else if (tipo === 'trash') {
@@ -717,22 +718,9 @@
           word.textContent = HERO_ROTATOR_WORDS[heroRotatorIndex % HERO_ROTATOR_WORDS.length];
         }
       }
-      const inputDesc = document.getElementById('editHeroDesc');
-      if (inputDesc) inputDesc.value = heroTextData.desc;
       iniciarRotadorHero();
     }
 
-    function guardarTextosHero() {
-      const inputDesc = document.getElementById('editHeroDesc').value;
-      if (!inputDesc.trim()) return;
-
-      heroTextData = { ...heroTextData, titulo: "Tu tienda de [palabra automática]", desc: inputDesc };
-      localStorage.setItem(STORAGE_KEY_HERO, JSON.stringify(heroTextData));
-      programarGuardadoNube();
-      renderizarTextosHero();
-      reproducirSonido('exito');
-      registrarLog("Texto descriptivo de la página de inicio actualizado.");
-    }
 
     // CARGA DE CATEGORÍAS PERSISTENTES
     const defaultCats = ["Teléfonos", "Smart TV", "Parlantes", "Perfumes", "Joyas"];
@@ -781,10 +769,60 @@
       return { categorias: listaCategorias, productos, logs: logsCajaNegra, hero: heroTextData, showcase: showcaseItems, theme: swagThemeData, palettes: swagCustomPalettes, sound: swagSoundData, homeFeature };
     }
     function guardarEstadoCompleto() {
-      localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
-      localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos));
-      localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logsCajaNegra));
+      try {
+        localStorage.setItem(STORAGE_KEY_CATS, JSON.stringify(listaCategorias));
+        localStorage.setItem(STORAGE_KEY_PRODS, JSON.stringify(productos));
+        localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logsCajaNegra));
+      } catch (error) {
+        console.error("No se pudo guardar el estado local de SWAG:", error);
+        mostrarAvisoProducto("El almacenamiento del navegador está lleno. Reduce el tamaño de las fotos o libera espacio antes de continuar.", "error");
+        return false;
+      }
       programarGuardadoNube();
+      return true;
+    }
+
+    function mostrarAvisoProducto(mensaje, tipo = "ok") {
+      const box = document.getElementById("productoSaveStatus");
+      if (!box) return;
+      box.textContent = mensaje;
+      box.className = `text-xs rounded-lg px-3 py-2 mt-2 ${tipo === "error" ? "bg-red-50 text-red-800 border border-red-200" : "bg-green-50 text-green-800 border border-green-200"}`;
+      box.classList.remove("hidden");
+    }
+
+    async function optimizarImagenProducto(file, maxSide = 1200, maxBytes = 260 * 1024) {
+      if (!file) return null;
+      if (!file.type || !file.type.startsWith("image/")) throw new Error("Selecciona un archivo de imagen válido.");
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(file);
+      } catch (_) {
+        bitmap = await new Promise((resolve, reject) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo leer una de las fotografías.")); };
+          img.src = url;
+        });
+      }
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) throw new Error("No se pudo procesar la fotografía en este navegador.");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      if (bitmap.close) bitmap.close();
+      let quality = 0.78;
+      let dataUrl = canvas.toDataURL("image/jpeg", quality);
+      while (dataUrl.length * 0.75 > maxBytes && quality > 0.42) {
+        quality -= 0.08;
+        dataUrl = canvas.toDataURL("image/jpeg", quality);
+      }
+      if (dataUrl.length * 0.75 > maxBytes * 1.35) throw new Error("Una fotografía sigue siendo demasiado pesada. Prueba con una imagen más pequeña.");
+      return dataUrl;
     }
     function programarGuardadoNube() {
       if (!swagDb || !swagAdminSession || !swagCloudReady) return;
@@ -1216,58 +1254,79 @@
       }, 400);
     }
 
-    function guardarProducto(e) {
+    function limpiarFormulario() {
+      const form = document.getElementById("formProducto");
+      if (!form) return;
+      form.reset();
+      const editId = document.getElementById("pEditId");
+      if (editId) editId.value = "";
+      const title = document.getElementById("formTitulo");
+      if (title) title.innerHTML = '<i data-lucide="plus-circle" class="text-swagLime w-4 h-4"></i> Publicar / Editar Artículo';
+      const status = document.getElementById("productoSaveStatus");
+      if (status) status.classList.add("hidden");
+      const submit = form.querySelector('button[type="submit"]');
+      if (submit) { submit.disabled = false; submit.textContent = "Guardar Artículo"; }
+      if (typeof safeCreateIcons === "function") safeCreateIcons();
+    }
+    window.limpiarFormulario = limpiarFormulario;
+
+    let guardandoProducto = false;
+    async function guardarProducto(e) {
       e.preventDefault();
-      reproducirSonido('exito');
-
-      const nombre = document.getElementById('pNombre').value;
-      const precio = parseFloat(document.getElementById('pPrecio').value);
+      if (guardandoProducto) return;
+      const form = document.getElementById("formProducto");
+      const submit = form?.querySelector('button[type="submit"]');
+      const nombre = document.getElementById('pNombre').value.trim();
+      const precio = Number(document.getElementById('pPrecio').value);
       const categoria = document.getElementById('pCategoria').value;
-      const specs = document.getElementById('pSpecs').value;
-      const portadaIdx = parseInt(document.getElementById('pPortadaIdx').value);
-
-      const file1 = document.getElementById('pFile1').files[0];
-      const file2 = document.getElementById('pFile2').files[0];
-      const file3 = document.getElementById('pFile3').files[0];
-
-      const url1 = document.getElementById('pUrl1').value || "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80";
-      const url2 = document.getElementById('pUrl2').value || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80";
-      const url3 = document.getElementById('pUrl3').value || "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80";
-
-      const leerArchivo = (file, fallback) => {
-        return new Promise((resolve) => {
-          if (file) {
-            const r = new FileReader();
-            r.onload = (res) => resolve(res.target.result);
-            r.readAsDataURL(file);
-          } else {
-            resolve(fallback);
-          }
-        });
-      };
-
-      Promise.all([leerArchivo(file1, url1), leerArchivo(file2, url2), leerArchivo(file3, url3)]).then((fotosFinales) => {
+      const specs = document.getElementById('pSpecs').value.trim();
+      const portadaIdx = Number.parseInt(document.getElementById('pPortadaIdx').value, 10) || 0;
+      const files = [1, 2, 3].map(n => document.getElementById(`pFile${n}`)?.files?.[0] || null);
+      const urls = [1, 2, 3].map((n, i) => {
+        const value = document.getElementById(`pUrl${n}`)?.value.trim();
+        return value || [
+          "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=80"
+        ][i];
+      });
+      if (!nombre || !Number.isFinite(precio) || precio < 0 || !categoria) {
+        mostrarAvisoProducto("Completa el nombre, un precio válido y la categoría.", "error");
+        return;
+      }
+      guardandoProducto = true;
+      if (submit) { submit.disabled = true; submit.dataset.oldText = submit.textContent; submit.textContent = "Procesando imágenes…"; }
+      mostrarAvisoProducto("Optimizando fotografías y guardando el artículo…");
+      try {
+        const fotosFinales = await Promise.all(files.map(async (file, i) => file ? await optimizarImagenProducto(file) : urls[i]));
+        const editId = document.getElementById("pEditId")?.value;
+        const existente = editId ? productos.find(p => String(p.id) === String(editId)) : null;
         const nuevo = {
-          id: Date.now(),
-          nombre,
-          precio,
-          categoria,
-          specs,
+          id: existente ? existente.id : Date.now(), nombre, precio, categoria, specs,
           fotos: fotosFinales,
-          portadaIndex: portadaIdx
+          portadaIndex: Math.min(2, Math.max(0, portadaIdx))
         };
-
-        productos.unshift(nuevo);
-        guardarEstadoCompleto();
-        registrarLog(`Nuevo artículo creado: "${nombre}" ($${precio} USD)`);
-
+        const anterior = productos;
+        productos = existente ? productos.map(p => String(p.id) === String(editId) ? nuevo : p) : [nuevo, ...productos];
+        if (!guardarEstadoCompleto()) { productos = anterior; throw new Error("No se pudo guardar el artículo en el navegador. Revisa el espacio disponible."); }
+        registrarLog(`${existente ? "Artículo actualizado" : "Nuevo artículo creado"}: "${nombre}" ($${precio} USD)`);
         renderizarCategorias();
         renderizarProductos();
         renderizarListaAdmin();
         actualizarSelectorProductosShowcase();
-        document.getElementById('formProducto').reset();
-        cerrarAdmin();
-      });
+        form.reset();
+        const edit = document.getElementById("pEditId"); if (edit) edit.value = "";
+        const titulo = document.getElementById("formTitulo"); if (titulo) titulo.innerHTML = '<i data-lucide="plus-circle" class="text-swagLime w-4 h-4"></i> Publicar / Editar Artículo';
+        safeCreateIcons();
+        mostrarAvisoProducto(existente ? "Artículo actualizado correctamente." : "Artículo publicado correctamente. Ya aparece en el catálogo.");
+        reproducirSonido('exito');
+      } catch (error) {
+        console.error("Error al guardar artículo SWAG:", error);
+        mostrarAvisoProducto(error.message || "No se pudo guardar el artículo. Comprueba las imágenes e inténtalo otra vez.", "error");
+      } finally {
+        guardandoProducto = false;
+        if (submit) { submit.disabled = false; submit.textContent = submit.dataset.oldText || "Guardar Artículo"; }
+      }
     }
 
     function verDetalles(id) {
