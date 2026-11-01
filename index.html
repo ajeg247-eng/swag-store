@@ -43,7 +43,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=wheel-desktop-20261101">
 </head>
 <body class="bg-swagDark text-white min-h-screen flex flex-col font-sans selection:bg-swagLime selection:text-black" data-swag-theme="original">
   <div id="swagSeasonFx" aria-hidden="true"></div>
@@ -94,17 +94,43 @@
   <!-- HERO CON ANIMACIONES DINÁMICAS -->
   
 <div class="page-section active" id="page-home" data-page-title="Inicio" aria-hidden="false" aria-label="Página Inicio">
-<section id="heroSection" class="px-6 py-10 md:py-14 text-center max-w-4xl mx-auto flex flex-col items-center">
-    <div class="inline-flex items-center gap-2 bg-swagLime/10 border border-swagLime/30 px-3.5 py-1 rounded-full text-[10px] md:text-xs font-bold text-swagLime uppercase tracking-widest mb-4 animate-bounce">
-      <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Tienda Oficial & Exclusiva
+  <section id="heroSection" class="swag-home-hero">
+    <div class="swag-home-copy">
+      <div class="swag-home-eyebrow"><span class="swag-live-dot"></span> TIENDA OFICIAL & EXCLUSIVA</div>
+      <p class="swag-home-overline">TECNOLOGÍA · ESTILO · EXPERIENCIA</p>
+      <h1 id="heroTituloText">Tu tienda de <span id="heroRotatorWord" class="hero-rotator-word" aria-live="polite">celulares</span>.</h1>
+      <p id="heroDescText" class="swag-home-description">Encuentra lo que buscas, compara opciones y descubre productos seleccionados para tu día a día.</p>
+      <div class="swag-home-actions">
+        <button type="button" class="swag-home-primary" onclick="showPage('page-catalog')">EXPLORAR CATÁLOGO <i data-lucide="arrow-up-right"></i></button>
+        <button type="button" class="swag-home-secondary" onclick="showPage('page-tech')">VER ESCAPARATE 3D <i data-lucide="play"></i></button>
+      </div>
+      <div class="swag-home-proof"><span><i data-lucide="shield-check"></i> Atención directa</span><span><i data-lucide="message-circle"></i> Cotiza por WhatsApp</span></div>
     </div>
-    <h1 id="heroTituloText" class="text-3xl md:text-6xl font-black italic uppercase tracking-tighter mb-4 leading-none transition-all duration-700 transform opacity-100 translate-y-0">
-      Tu tienda de <span id="heroRotatorWord" class="hero-rotator-word" aria-live="polite">celulares</span>.
-    </h1>
-    <p id="heroDescText" class="text-gray-400 text-sm md:text-base max-w-xl mb-6 transition-all duration-700 delay-100 transform opacity-100 translate-y-0">
-      Ajusta tu presupuesto disponible y consulta nuestras categorías con fotos reales en alta resolución.
-    </p>
+    <div class="swag-home-visual" aria-label="Producto destacado de SWAG">
+      <div class="swag-visual-orbit swag-orbit-one"></div><div class="swag-visual-orbit swag-orbit-two"></div>
+      <div class="swag-visual-tag"><span class="swag-live-dot"></span> SELECCIÓN SWAG</div>
+      <div class="swag-visual-image-wrap"><img id="swagHomeHeroImage" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1000&q=85" alt="Producto destacado" /></div>
+      <div class="swag-visual-caption"><span>DESCUBRE ALGO NUEVO</span><strong id="swagHomeHeroName">Tecnología para tu estilo</strong><small>Explora el catálogo y encuentra tu próximo favorito.</small></div>
+      <div class="swag-visual-index">SWAG <b>01</b> / DISCOVER</div>
+    </div>
   </section>
+
+  <section class="swag-home-benefits" aria-label="Ventajas de comprar en SWAG">
+    <div><span class="swag-benefit-icon"><i data-lucide="search"></i></span><span><b>Explora a tu ritmo</b><small>Productos y categorías</small></span></div>
+    <div><span class="swag-benefit-icon"><i data-lucide="sliders-horizontal"></i></span><span><b>Filtra por presupuesto</b><small>Encuentra opciones para ti</small></span></div>
+    <div><span class="swag-benefit-icon"><i data-lucide="message-circle"></i></span><span><b>Atención directa</b><small>Consulta antes de comprar</small></span></div>
+  </section>
+
+  <section class="swag-home-section">
+    <div class="swag-home-section-heading"><div><span class="swag-section-kicker">ENCUENTRA LO QUE BUSCAS</span><h2>Explora por <em>categoría</em></h2></div><button type="button" class="swag-text-link" onclick="showPage('page-catalog')">VER TODAS <i data-lucide="arrow-up-right"></i></button></div>
+    <div id="swagHomeCategories" class="swag-home-categories" aria-live="polite"></div>
+  </section>
+
+  <section class="swag-home-section swag-featured-section">
+    <div class="swag-home-section-heading"><div><span class="swag-section-kicker">UNA MIRADA A LO QUE TENEMOS</span><h2>Selección <em>destacada</em></h2></div><button type="button" class="swag-text-link" onclick="showPage('page-catalog')">IR AL CATÁLOGO <i data-lucide="arrow-up-right"></i></button></div>
+    <div id="swagHomeFeatured" class="swag-home-featured" aria-live="polite"></div>
+  </section>
+  <section class="swag-home-bottom"><div><span class="swag-section-kicker">TU PRÓXIMO FAVORITO TE ESPERA</span><h2>Descubre todo lo que <em>SWAG</em> tiene para ti.</h2></div><button type="button" class="swag-home-primary" onclick="showPage('page-catalog')">EXPLORAR AHORA <i data-lucide="arrow-up-right"></i></button></section>
 </div>
 
 
@@ -483,6 +509,6 @@
   <button id="swagInstallBtn" type="button" aria-label="Instalar SWAG en este dispositivo">＋ Instalar SWAG</button>
   
 
-<script src="script.js"></script>
+<script src="script.js?v=wheel-desktop-20261101"></script>
 </body>
 </html>

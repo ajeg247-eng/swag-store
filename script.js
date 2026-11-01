@@ -1,3 +1,111 @@
+/* =========================================================
+   SWAG — Wheel Navigation (desktop + mobile)
+   Inicialización independiente del resto de la tienda.
+   ========================================================= */
+(function initSwagWheel() {
+  function mountWheel() {
+    const wheel = document.getElementById('swagWheel');
+    if (!wheel || wheel.dataset.wheelReady === '1') return;
+
+    const machine = wheel.closest('.ccm-11_machine');
+    const stage = wheel.closest('.ccm-11_stage');
+    const pages = Array.from(document.querySelectorAll('.page-section'));
+    const items = Array.from(wheel.querySelectorAll('.ccm-11_item')).filter(item => {
+      const page = document.getElementById(item.dataset.page || '');
+      return Boolean(page && page.classList.contains('page-section'));
+    });
+    const title = document.getElementById('swagWheelTitle');
+    const count = document.getElementById('swagWheelCount');
+    const previous = document.getElementById('swagWheelPrev');
+    const next = document.getElementById('swagWheelNext');
+    const total = items.length;
+    if (!total) {
+      console.error('SWAG Wheel: no hay opciones vinculadas a páginas existentes.');
+      return;
+    }
+
+    wheel.dataset.wheelReady = '1';
+    [machine, wheel].filter(Boolean).forEach(element => element.style.setProperty('--n', total));
+    items.forEach((item, index) => {
+      item.style.setProperty('--i', index);
+      item.dataset.index = String(index);
+      item.setAttribute('aria-controls', item.dataset.page);
+      item.setAttribute('aria-label', `Ir a ${item.querySelector('.ccm-11_label')?.textContent.trim() || 'sección'}`);
+    });
+
+    const activePage = pages.find(page => page.classList.contains('active'));
+    const initialIndex = items.findIndex(item => item.dataset.page === activePage?.id || item.classList.contains('is-active'));
+    let activeIndex = initialIndex >= 0 ? initialIndex : 0;
+
+    function activate(index, options = {}) {
+      const selectedIndex = ((index % total) + total) % total;
+      const selected = items[selectedIndex];
+      const pageId = selected.dataset.page;
+      const page = document.getElementById(pageId);
+      if (!page || !page.classList.contains('page-section')) return false;
+
+      activeIndex = selectedIndex;
+      pages.forEach(section => {
+        const current = section.id === pageId;
+        section.classList.toggle('active', current);
+        section.setAttribute('aria-hidden', String(!current));
+      });
+      items.forEach((item, itemIndex) => {
+        const current = itemIndex === activeIndex;
+        item.classList.toggle('is-active', current);
+        if (current) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+      });
+
+      const rotation = -(activeIndex * (360 / total));
+      wheel.style.setProperty('--rotation', `${rotation}deg`);
+      // Asignación explícita como respaldo para navegadores de escritorio antiguos.
+      wheel.style.transform = `rotate(${rotation}deg)`;
+      if (title) title.textContent = selected.querySelector('.ccm-11_label')?.textContent.trim() || 'SWAG';
+      if (count) count.textContent = `${String(activeIndex + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+
+      if (options.scroll !== false) {
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
+      document.dispatchEvent(new CustomEvent('swag:pagechange', { detail: { pageId, index: activeIndex } }));
+      return true;
+    }
+
+    // API global usada por los botones de la portada y por el catálogo.
+    window.showPage = function showPage(pageId) {
+      const index = items.findIndex(item => item.dataset.page === pageId);
+      return index < 0 ? false : activate(index);
+    };
+
+    // Delegación: los clics funcionan aunque cambie el contenido interno del botón.
+    wheel.addEventListener('click', event => {
+      const item = event.target instanceof Element ? event.target.closest('.ccm-11_item') : null;
+      if (!item || !wheel.contains(item)) return;
+      const index = items.indexOf(item);
+      if (index >= 0) activate(index);
+    });
+    previous?.addEventListener('click', () => activate(activeIndex - 1));
+    next?.addEventListener('click', () => activate(activeIndex + 1));
+
+    document.addEventListener('keydown', event => {
+      const target = event.target;
+      if (event.altKey || event.ctrlKey || event.metaKey ||
+          (target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"]'))) return;
+      if (event.key === 'ArrowLeft') { event.preventDefault(); activate(activeIndex - 1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); activate(activeIndex + 1); }
+    });
+
+    activate(activeIndex, { scroll: false });
+    stage?.classList.add('ccm-11_ready');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountWheel, { once: true });
+  } else {
+    mountWheel();
+  }
+})();
+
 
     // La animación se ejecuta al cargar/abrir la app; no interviene en la navegación interna.
     (function(){
@@ -481,7 +589,7 @@
       localStorage.setItem(STORAGE_KEY_HERO, JSON.stringify(heroTextData));
       localStorage.setItem(STORAGE_KEY_SHOWCASE, JSON.stringify(showcaseItems));
       aplicarTemaSWAG();
-      renderizarTextosHero(); renderizarCategorias(); renderizarProductos();
+      renderizarTextosHero(); renderizarCategorias(); renderizarProductos(); renderizarInicio();
       if (typeof renderizarEscaparate3DCards === "function") renderizarEscaparate3DCards();
       swagCloudReady = true;
     }
@@ -723,6 +831,69 @@
         grid.appendChild(card);
       });
       safeCreateIcons();
+    }
+
+
+    // PORTADA DINÁMICA: categorías y productos destacados usan los datos reales del catálogo.
+    function renderizarInicio() {
+      const categoriesHost = document.getElementById("swagHomeCategories");
+      const featuredHost = document.getElementById("swagHomeFeatured");
+      const heroImage = document.getElementById("swagHomeHeroImage");
+      const heroName = document.getElementById("swagHomeHeroName");
+      const safeText = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+      const categoryPhotos = {
+        "teléfonos":"https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=500&q=80",
+        "telefonos":"https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=500&q=80",
+        "smart tv":"https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=500&q=80",
+        "parlantes":"https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=500&q=80",
+        "perfumes":"https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=500&q=80",
+        "joyas":"https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=500&q=80"
+      };
+      const imageFor = category => {
+        const match = productos.find(p => String(p.categoria).toLowerCase() === String(category).toLowerCase() && p.fotos?.length);
+        return match ? (match.fotos[match.portadaIndex] || match.fotos[0]) : (categoryPhotos[String(category).toLowerCase()] || "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=500&q=80");
+      };
+      if (categoriesHost) {
+        categoriesHost.innerHTML = "";
+        const categories = (Array.isArray(listaCategorias) ? listaCategorias : []).slice(0, 10);
+        if (!categories.length) categoriesHost.innerHTML = '<div class="swag-home-empty">Pronto verás aquí nuestras categorías.</div>';
+        categories.forEach(category => {
+          const button = document.createElement("button");
+          button.type = "button"; button.className = "swag-home-category";
+          const img = document.createElement("img"); img.src = imageFor(category); img.alt = ""; img.loading = "lazy";
+          const label = document.createElement("span"); label.innerHTML = `${safeText(category)}<small>Explorar categoría</small>`;
+          button.append(img, label);
+          button.addEventListener("click", () => {
+            categoriaSeleccionada = category;
+            renderizarCategorias(); renderizarProductos();
+            if (typeof window.showPage === "function") window.showPage("page-catalog");
+          });
+          categoriesHost.appendChild(button);
+        });
+      }
+      const featured = (Array.isArray(productos) ? productos : []).slice(0, 3);
+      if (featured.length && heroImage && heroName) {
+        const p = featured[0]; const photo = p.fotos?.[p.portadaIndex] || p.fotos?.[0];
+        if (photo) heroImage.src = photo;
+        heroName.textContent = p.nombre || "Producto destacado";
+      }
+      if (featuredHost) {
+        featuredHost.innerHTML = "";
+        if (!featured.length) featuredHost.innerHTML = '<div class="swag-home-empty">Estamos preparando la selección destacada. Vuelve pronto.</div>';
+        featured.forEach(product => {
+          const card = document.createElement("article"); card.className = "swag-home-product"; card.tabIndex = 0; card.setAttribute("role", "button"); card.setAttribute("aria-label", `Ver ${product.nombre || "producto"}`);
+          const img = document.createElement("img"); img.loading = "lazy"; img.alt = product.nombre || "Producto"; img.src = product.fotos?.[product.portadaIndex] || product.fotos?.[0] || "";
+          const info = document.createElement("div"); info.className = "swag-home-product-info";
+          const category = document.createElement("small"); category.textContent = product.categoria || "SWAG";
+          const name = document.createElement("strong"); name.textContent = product.nombre || "Producto";
+          const price = document.createElement("b"); price.textContent = `$${Number(product.precio || 0).toLocaleString("en-US")} USD`;
+          info.append(category,name,price); card.append(img,info);
+          const open = () => { if (typeof window.showPage === "function") window.showPage("page-catalog"); if (typeof verDetalles === "function") verDetalles(product.id); };
+          card.addEventListener("click",open); card.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();open();}});
+          featuredHost.appendChild(card);
+        });
+      }
+      if (typeof safeCreateIcons === "function") safeCreateIcons();
     }
 
     function abrirAdmin() {
@@ -975,6 +1146,7 @@
     registrarVisitaSitio();
     renderizarCategorias();
     renderizarProductos();
+    renderizarInicio();
     cargarEstadoDesdeNube().catch(err => console.warn("Sincronización inicial pendiente:", err));
   
 
@@ -1001,99 +1173,3 @@
         window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SWAG PWA: no se pudo registrar el service worker:',err)));
       }
     })();
-  
-
-
-/* =========================================================
-   SWAG — Wheel Navigation
-   Navega únicamente entre páginas públicas existentes.
-   ========================================================= */
-(function () {
-  const wheel = document.getElementById('swagWheel');
-  if (!wheel) return;
-
-  const machine = wheel.closest('.ccm-11_machine');
-  const allItems = Array.from(wheel.querySelectorAll('.ccm-11_item'));
-  const pages = Array.from(document.querySelectorAll('.page-section'));
-  const items = allItems.filter(item => {
-    const page = document.getElementById(item.dataset.page || '');
-    return Boolean(page && page.classList.contains('page-section'));
-  });
-  const title = document.getElementById('swagWheelTitle');
-  const count = document.getElementById('swagWheelCount');
-  const previous = document.getElementById('swagWheelPrev');
-  const next = document.getElementById('swagWheelNext');
-  const total = items.length;
-  if (!total) {
-    console.warn('SWAG Wheel: no hay opciones vinculadas a páginas existentes.');
-    return;
-  }
-
-  // El número de posiciones siempre coincide con las opciones válidas.
-  [machine, wheel].filter(Boolean).forEach(el => el.style.setProperty('--n', total));
-  items.forEach((item, index) => {
-    item.style.setProperty('--i', index);
-    item.dataset.index = String(index);
-    item.setAttribute('aria-controls', item.dataset.page);
-  });
-
-  const initiallyActive = items.findIndex(item => {
-    const page = document.getElementById(item.dataset.page);
-    return item.classList.contains('is-active') || page.classList.contains('active');
-  });
-  let activeIndex = initiallyActive >= 0 ? initiallyActive : 0;
-
-  function activate(index, options = {}) {
-    const nextIndex = ((index % total) + total) % total;
-    const selected = items[nextIndex];
-    const pageId = selected.dataset.page;
-    const page = document.getElementById(pageId);
-    if (!page) return false;
-
-    activeIndex = nextIndex;
-    pages.forEach(section => {
-      const isCurrent = section.id === pageId;
-      section.classList.toggle('active', isCurrent);
-      section.setAttribute('aria-hidden', String(!isCurrent));
-    });
-
-    items.forEach((item, i) => {
-      const isCurrent = i === activeIndex;
-      item.classList.toggle('is-active', isCurrent);
-      if (isCurrent) item.setAttribute('aria-current', 'page');
-      else item.removeAttribute('aria-current');
-    });
-
-    const step = 360 / total;
-    const rotation = -activeIndex * step;
-    wheel.style.setProperty('--rotation', `${rotation}deg`);
-    if (title) title.textContent = selected.querySelector('.ccm-11_label')?.textContent.trim() || 'SWAG';
-    if (count) count.textContent = `${String(activeIndex + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
-
-    if (options.scroll !== false) {
-      window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    }
-    document.dispatchEvent(new CustomEvent('swag:pagechange', { detail: { pageId, index: activeIndex } }));
-    return true;
-  }
-
-  // API pública para integraciones; no acepta IDs que no pertenezcan a la rueda.
-  window.showPage = function showPage(pageId) {
-    const index = items.findIndex(item => item.dataset.page === pageId);
-    return index === -1 ? false : activate(index);
-  };
-
-  items.forEach((item, index) => item.addEventListener('click', () => activate(index)));
-  previous?.addEventListener('click', () => activate(activeIndex - 1));
-  next?.addEventListener('click', () => activate(activeIndex + 1));
-
-  document.addEventListener('keydown', event => {
-    const target = event.target;
-    if (event.altKey || event.ctrlKey || event.metaKey ||
-        (target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"]'))) return;
-    if (event.key === 'ArrowLeft') activate(activeIndex - 1);
-    if (event.key === 'ArrowRight') activate(activeIndex + 1);
-  });
-
-  activate(activeIndex, { scroll: false });
-})();
