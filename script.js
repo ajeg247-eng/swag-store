@@ -108,6 +108,14 @@
 })();
 
 
+    // Navegación visual del panel CEO: resalta la pestaña seleccionada.
+    document.querySelectorAll('.swag-ceo-nav a[href^="#"]').forEach(link => {
+      link.addEventListener('click', () => {
+        document.querySelectorAll('.swag-ceo-nav a').forEach(item => item.classList.remove('is-current'));
+        link.classList.add('is-current');
+      });
+    });
+
     // La animación se ejecuta al cargar/abrir la app; no interviene en la navegación interna.
     (function(){
       const splash=document.getElementById('swag-opening-splash');
@@ -241,26 +249,8 @@
     window.guardarConfiguracionSonido = guardarConfiguracionSonido;
     window.actualizarVolumenSonido = actualizarVolumenSonido;
 
-    // ANIMACIÓN DE SCROLL DINÁMICA (REVEAL/HIDE AL DESLIZAR)
-    window.addEventListener('scroll', () => {
-      const hero = document.getElementById('heroSection');
-      const title = document.getElementById('heroTituloText');
-      const desc = document.getElementById('heroDescText');
-      if (!title || !desc) return;
-
-      const scrollY = window.scrollY;
-      if (scrollY > 150) {
-        title.classList.add('opacity-0', '-translate-y-6');
-        title.classList.remove('opacity-100', 'translate-y-0');
-        desc.classList.add('opacity-0', '-translate-y-6');
-        desc.classList.remove('opacity-100', 'translate-y-0');
-      } else {
-        title.classList.remove('opacity-0', '-translate-y-6');
-        title.classList.add('opacity-100', 'translate-y-0');
-        desc.classList.remove('opacity-0', '-translate-y-6');
-        desc.classList.add('opacity-100', 'translate-y-0');
-      }
-    });
+    // El título y la descripción del hero permanecen visibles al desplazarse.
+    // Se eliminó el efecto anterior que añadía opacity-0 al superar 150px.
 
     // CARGA DE TEXTO DE HERO
     const SWAG_THEMES = {
@@ -575,9 +565,11 @@
       const titleWidth = Math.max(120, title.clientWidth || title.getBoundingClientRect().width);
       const titleFont = parseFloat(getComputedStyle(title).fontSize) || 48;
       const baseSize = titleFont * 0.82;
-      let low = baseSize * 0.52;
-      let high = baseSize;
-      wordEl.style.fontSize = `${baseSize}px`;
+      let low = baseSize * 0.60;
+      let high = baseSize * 0.88;
+      wordEl.style.whiteSpace = "nowrap";
+      wordEl.style.overflow = "visible";
+      wordEl.style.fontSize = `${high}px`;
       // Busca el tamaño más grande que permita mostrar la palabra completa sin cortar letras.
       for (let i = 0; i < 14; i++) {
         const mid = (low + high) / 2;
@@ -585,7 +577,7 @@
         if (wordEl.getBoundingClientRect().width <= titleWidth - 2) low = mid;
         else high = mid;
       }
-      wordEl.style.fontSize = `${Math.max(baseSize * 0.52, low)}px`;
+      wordEl.style.fontSize = `${Math.max(baseSize * 0.60, Math.min(baseSize * 0.88, low))}px`;
     }
 
     function detenerRotadorHero(){
