@@ -201,36 +201,56 @@
       if (!swagSoundData.enabled || !AudioCtx || swagSoundData.volume <= 0) return;
       try {
         if (!audioCtx) audioCtx = new AudioCtx();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const now = audioCtx.currentTime;
-        const master = Math.min(0.22, swagSoundData.volume * 0.22);
-        const tone = (frequency, endFrequency, startAt, duration, wave = 'sine', peak = 0.35) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = wave;
-          osc.frequency.setValueAtTime(frequency, startAt);
-          if (endFrequency && endFrequency !== frequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, startAt + duration);
-          gain.gain.setValueAtTime(0.0001, startAt);
-          gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, master * peak), startAt + Math.min(0.018, duration * 0.25));
-          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-          osc.connect(gain); gain.connect(audioCtx.destination);
-          osc.start(startAt); osc.stop(startAt + duration + 0.01);
+        const ejecutarTono = () => {
+          if (!audioCtx) return;
+          const now = audioCtx.currentTime;
+          const master = Math.min(0.22, swagSoundData.volume * 0.22);
+          const tone = (frequency, endFrequency, startAt, duration, wave = 'sine', peak = 0.35) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = wave;
+            osc.frequency.setValueAtTime(frequency, startAt);
+            if (endFrequency && endFrequency !== frequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, startAt + duration);
+            gain.gain.setValueAtTime(0.0001, startAt);
+            gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, master * peak), startAt + Math.min(0.018, duration * 0.25));
+            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(startAt); osc.stop(startAt + duration + 0.01);
+          };
+          if (tipo === 'wheel') {
+            // Doble tono limpio, breve y discreto al cambiar de página.
+            tone(520, 690, now, 0.13, 'sine', 0.42);
+            tone(780, 980, now + 0.045, 0.12, 'sine', 0.24);
+          } else if (tipo === 'click') {
+            tone(760, 470, now, 0.065, 'sine', 0.34);
+          } else if (tipo === 'trash') {
+            tone(360, 115, now, 0.19, 'triangle', 0.5);
+          } else if (tipo === 'exito') {
+            tone(523.25, 523.25, now, 0.16, 'sine', 0.42);
+            tone(659.25, 659.25, now + 0.075, 0.18, 'sine', 0.34);
+          }
         };
-        if (tipo === 'wheel') {
-          // Doble tono limpio, breve y discreto para el cambio de sección.
-          tone(520, 690, now, 0.13, 'sine', 0.42);
-          tone(780, 980, now + 0.045, 0.12, 'sine', 0.24);
-        } else if (tipo === 'click') {
-          tone(760, 470, now, 0.065, 'sine', 0.34);
-        } else if (tipo === 'trash') {
-          tone(360, 115, now, 0.19, 'triangle', 0.5);
-        } else if (tipo === 'exito') {
-          tone(523.25, 523.25, now, 0.16, 'sine', 0.42);
-          tone(659.25, 659.25, now + 0.075, 0.18, 'sine', 0.34);
+        // Algunos navegadores mantienen Web Audio suspendido hasta que el usuario interactúa.
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().then(ejecutarTono).catch(() => {});
+        } else {
+          ejecutarTono();
         }
       } catch (e) { console.debug('Audio SWAG no disponible en este navegador.', e); }
     }
     window.reproducirSonido = reproducirSonido;
+
+    // Desbloquea el contexto de audio con la primera interacción real del usuario.
+    // Esto permite que el sonido de la rueda funcione también después de cargar la página.
+    function desbloquearAudioSWAG() {
+      if (!AudioCtx || !swagSoundData.enabled) return;
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      } catch (e) { /* El audio es opcional; nunca debe bloquear la tienda. */ }
+    }
+    document.addEventListener('pointerdown', desbloquearAudioSWAG, { capture: true, passive: true });
+    document.addEventListener('keydown', desbloquearAudioSWAG, { capture: true });
 
     function guardarConfiguracionSonido() {
       const enabled = document.getElementById('swagSoundEnabled');
