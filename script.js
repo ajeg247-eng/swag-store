@@ -461,6 +461,19 @@
       });
     }
 
+    function actualizarSelectorProductosShowcase(selectedId = "") {
+      const select = document.getElementById("showcaseProductoId");
+      if (!select) return;
+      select.innerHTML = '<option value="">Vincular automáticamente por nombre</option>';
+      productos.forEach(product => {
+        const option = document.createElement("option");
+        option.value = String(product.id);
+        option.textContent = `${product.nombre} — $${Number(product.precio || 0).toLocaleString("en-US")}`;
+        select.appendChild(option);
+      });
+      select.value = selectedId == null ? "" : String(selectedId);
+    }
+
     function renderizarListaShowcase() {
       const list = document.getElementById("listaAdminShowcase");
       const count = document.getElementById("showcaseCount");
@@ -492,7 +505,19 @@
         const label = document.createElement("div"); label.className = "tech-card-label";
         const small = document.createElement("small"); small.textContent = item.subtitulo || "Descubre el producto";
         const strong = document.createElement("strong"); strong.textContent = item.titulo;
-        label.append(small, strong); card.append(img, label); ring.appendChild(card);
+        label.append(small, strong); card.append(img, label);
+        card.setAttribute("role", "link"); card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-label", `Ver ${item.titulo} en el catálogo`); card.style.cursor = "pointer";
+        const abrirProductoDesdeEscaparate = () => {
+          const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+          const product = productos.find(p => (item.productId != null && String(p.id) === String(item.productId)) || normalize(p.nombre) === normalize(item.titulo));
+          if (typeof window.showPage === "function") window.showPage("page-catalog");
+          if (product && typeof verDetalles === "function") window.setTimeout(() => verDetalles(product.id), 120);
+          else { const budget = document.getElementById("presupuestoInputNumerico"); if (budget) budget.value = "0"; renderizarProductos(); }
+        };
+        card.addEventListener("click", abrirProductoDesdeEscaparate);
+        card.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); abrirProductoDesdeEscaparate(); } });
+        ring.appendChild(card);
       });
       if (window.actualizarPosicionesShowcase) window.actualizarPosicionesShowcase();
     }
@@ -502,6 +527,7 @@
       document.getElementById("showcaseTitulo").value = "";
       document.getElementById("showcaseSubtitulo").value = "";
       document.getElementById("showcaseFoto").value = "";
+      const productSelect = document.getElementById("showcaseProductoId"); if (productSelect) productSelect.value = "";
       document.getElementById("showcasePreview").classList.add("hidden");
       document.getElementById("btnGuardarShowcase").textContent = "Agregar al escaparate";
     }
@@ -511,6 +537,7 @@
       showcaseEditId = id; showcasePendingImage = item.imagen;
       document.getElementById("showcaseTitulo").value = item.titulo;
       document.getElementById("showcaseSubtitulo").value = item.subtitulo || "";
+      actualizarSelectorProductosShowcase(item.productId || "");
       const preview = document.getElementById("showcasePreview"); preview.src = item.imagen; preview.classList.remove("hidden");
       document.getElementById("btnGuardarShowcase").textContent = "Guardar cambios";
       document.getElementById("showcaseTitulo").focus();
@@ -519,6 +546,8 @@
     async function guardarArticuloShowcase() {
       const titulo = document.getElementById("showcaseTitulo").value.trim();
       const subtitulo = document.getElementById("showcaseSubtitulo").value.trim();
+      const selectedProductId = document.getElementById("showcaseProductoId")?.value || "";
+      const productId = selectedProductId ? selectedProductId : null;
       const file = document.getElementById("showcaseFoto").files[0];
       if (!titulo) { alert("Escribe el título del artículo."); return; }
       let imagen = showcasePendingImage;
@@ -529,9 +558,9 @@
       if (!imagen) { alert("Selecciona una fotografía desde tu dispositivo."); return; }
       if (showcaseEditId !== null) {
         const index = showcaseItems.findIndex(x => x.id === showcaseEditId);
-        if (index >= 0) showcaseItems[index] = {...showcaseItems[index], titulo, subtitulo, imagen};
+        if (index >= 0) showcaseItems[index] = {...showcaseItems[index], titulo, subtitulo, imagen, productId};
       } else {
-        showcaseItems.push({id: Date.now(), titulo, subtitulo, imagen});
+        showcaseItems.push({id: Date.now(), titulo, subtitulo, imagen, productId});
       }
       if (!guardarShowcaseStorage()) return;
       registrarLog(`${showcaseEditId !== null ? "Artículo 3D actualizado" : "Artículo agregado al escaparate 3D"}: ${titulo}`);
@@ -883,36 +912,54 @@
       safeCreateIcons();
     }
 
+    let swagCeoLoginInProgress = false;
     async function iniciarSesionCEO(event) {
       event.preventDefault();
-      const email = document.getElementById('ceoVaultEmail').value.trim();
-      const password = document.getElementById('ceoVaultPassword').value;
+      if (swagCeoLoginInProgress) return;
+      const email = document.getElementById('ceoVaultEmail')?.value.trim();
+      const password = document.getElementById('ceoVaultPassword')?.value;
       const errorBox = document.getElementById('ceoVaultError');
       const button = document.getElementById('ceoVaultSubmit');
-      const original = button.innerHTML;
+      if (!button || !errorBox) return;
+      const original = button.dataset.originalHtml || button.innerHTML;
+      button.dataset.originalHtml = original;
       errorBox.textContent = '';
+      if (!email || !password) { errorBox.textContent = 'Escribe tu correo y contraseña para continuar.'; return; }
+      swagCeoLoginInProgress = true;
       button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
       button.innerHTML = '<i data-lucide="loader-circle" class="w-4 h-4 animate-spin"></i><span>Verificando credenciales...</span>';
       safeCreateIcons();
+      let timeoutId;
       try {
-        if (!swagDb) throw new Error("No se pudo conectar con el servicio de autenticación. Comprueba tu conexión e inténtalo de nuevo.");
-        const { data, error } = await swagDb.auth.signInWithPassword({ email, password });
-        if (error) throw new Error('No se pudo iniciar sesión. Verifica tu correo y contraseña.');
-        const { data: admin, error: adminError } = await swagDb.from("swag_admins").select("user_id").eq("user_id", data.user.id).maybeSingle();
-        if (adminError || !admin) {
+        if (!swagDb) throw new Error('No se pudo conectar con el servicio de autenticación. Comprueba tu conexión e inténtalo de nuevo.');
+        const timeout = new Promise((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error('La verificación está tardando demasiado. Comprueba tu conexión e inténtalo de nuevo.')), 18000); });
+        const authResult = await Promise.race([swagDb.auth.signInWithPassword({ email, password }), timeout]);
+        if (authResult.error) throw new Error('No se pudo iniciar sesión. Verifica tu correo y contraseña.');
+        const userId = authResult.data?.user?.id;
+        if (!userId) throw new Error('Supabase no devolvió una sesión válida. Inténtalo de nuevo.');
+        const adminResult = await Promise.race([swagDb.from('swag_admins').select('user_id').eq('user_id', userId).maybeSingle(), timeout]);
+        if (adminResult.error || !adminResult.data) {
           await swagDb.auth.signOut();
           throw new Error('Este usuario no tiene permisos de administrador SWAG.');
         }
-        swagAdminSession = data.session;
+        swagAdminSession = authResult.data.session;
         reproducirSonido('exito');
-        registrarLog("Acceso CEO autenticado mediante Supabase.");
+        registrarLog('Acceso CEO autenticado mediante Supabase.');
         cerrarBovedaCEO();
         abrirAdmin();
       } catch (err) {
         errorBox.textContent = err.message || 'No se pudo validar el acceso. Inténtalo de nuevo.';
-        button.innerHTML = original;
-        button.disabled = false;
-        safeCreateIcons();
+        if (/tardando demasiado/.test(errorBox.textContent)) { try { await swagDb?.auth?.signOut(); } catch (_) {} }
+      } finally {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        swagCeoLoginInProgress = false;
+        if (button.isConnected) {
+          button.innerHTML = original;
+          button.disabled = false;
+          button.removeAttribute('aria-busy');
+          safeCreateIcons();
+        }
       }
     }
 
@@ -992,17 +1039,20 @@
     function renderizarProductos() {
       const grid = document.getElementById('gridProductos');
       if (!grid) return;
-      const maxPresupuesto = parseFloat(document.getElementById('presupuestoInput').value);
+      const numericInput = document.getElementById('presupuestoInputNumerico');
+      const parsedBudget = Number(numericInput?.value ?? 0);
+      const maxPresupuesto = Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : 0;
       grid.innerHTML = '';
 
+      // Presupuesto 0 significa mostrar todos los artículos, sin límite de precio.
       const filtrados = productos.filter(p => {
         const coincideCat = categoriaSeleccionada === 'todos' || p.categoria === categoriaSeleccionada;
-        const coincidePrecio = p.precio <= maxPresupuesto;
-        return coincideCat && coincidePrecio;
+        const precio = Number(p.precio || 0);
+        return coincideCat && (maxPresupuesto === 0 || precio <= maxPresupuesto);
       });
 
       if (filtrados.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><p class="text-sm font-bold">No hay artículos disponibles dentro de este presupuesto ($${maxPresupuesto} USD)</p></div>`;
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><p class="text-sm font-bold">No hay artículos disponibles ${maxPresupuesto > 0 ? `hasta $${maxPresupuesto} USD` : 'en esta categoría'}.</p></div>`;
         return;
       }
 
@@ -1113,6 +1163,7 @@
       renderizarCatEliminar();
       renderizarListaAdmin();
       renderizarListaShowcase();
+      actualizarSelectorProductosShowcase();
       renderizarLogs();
       renderizarEstadisticasVisitas();
       renderizarPaletasGuardadas();
@@ -1213,6 +1264,7 @@
         renderizarCategorias();
         renderizarProductos();
         renderizarListaAdmin();
+        actualizarSelectorProductosShowcase();
         document.getElementById('formProducto').reset();
         cerrarAdmin();
       });
@@ -1258,23 +1310,27 @@
     // CONTROL DE PRESUPUESTO MANUAL O DESLIZANTE
     function actualizarDesdeSlider(val) {
       reproducirSonido('slide');
-      document.getElementById('presupuestoInputNumerico').value = val;
+      const numeric = document.getElementById('presupuestoInputNumerico');
+      if (numeric) numeric.value = String(Math.max(0, Number(val) || 0));
       renderizarProductos();
     }
 
     function actualizarDesdeInput(val) {
-      const num = parseFloat(val);
-      if (!isNaN(num) && num >= 0) {
-        const slider = document.getElementById('presupuestoInput');
-        if (num <= parseFloat(slider.max)) {
-          slider.value = num;
-        }
-        renderizarProductos();
-      }
+      if (val === '') return;
+      const num = Number(val);
+      if (!Number.isFinite(num) || num < 0) return;
+      const slider = document.getElementById('presupuestoInput');
+      if (slider) slider.value = String(Math.min(Number(slider.max || 100000), num));
+      renderizarProductos();
     }
 
-    function filtrarPorPresupuesto(val) {
-      actualizarDesdeSlider(val);
+    function filtrarPorPresupuesto(val) { actualizarDesdeSlider(val); }
+    function limpiarFiltroPresupuesto() {
+      const numeric = document.getElementById('presupuestoInputNumerico');
+      const slider = document.getElementById('presupuestoInput');
+      if (numeric) numeric.value = '0';
+      if (slider) slider.value = '0';
+      renderizarProductos();
     }
 
     function abrirCotizacion(nombre, precio) {

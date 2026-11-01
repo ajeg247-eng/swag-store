@@ -172,18 +172,18 @@
           <h2 class="text-xl md:text-2xl font-black uppercase tracking-tight flex items-center gap-2">
             <i data-lucide="sliders" class="text-swagLime w-5 h-5"></i> Filtro de Presupuesto
           </h2>
-          <p class="text-[11px] text-gray-400">Desliza o escribe manualmente el monto máximo que deseas gastar</p>
+          <p class="text-[11px] text-gray-400">Deja el presupuesto en $0 para ver todos los artículos, o escribe tu máximo para filtrar por precio</p>
         </div>
         <div class="bg-swagDark px-5 py-2.5 rounded-2xl border border-swagLime/30 flex items-center gap-2">
-          <span class="text-[10px] text-gray-400 uppercase font-bold">Máximo ($):</span>
-          <input type="number" id="presupuestoInputNumerico" min="0" max="100000" value="1500" 
+          <span class="text-[10px] text-gray-400 uppercase font-bold">Presupuesto ($):</span>
+          <input type="number" id="presupuestoInputNumerico" min="0" max="100000" value="0" 
                  class="w-24 bg-swagGray border border-swagLime/40 rounded-xl px-2 py-1 text-xl font-black text-swagLime glow-text outline-none text-center"
                  oninput="actualizarDesdeInput(this.value)">
         </div>
       </div>
 
       <!-- Deslizador Range sincronizado -->
-      <input type="range" id="presupuestoInput" min="50" max="5000" step="50" value="1500" class="w-full h-2.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-swagLime mb-6" oninput="actualizarDesdeSlider(this.value)">
+      <input type="range" id="presupuestoInput" min="0" max="100000" step="50" value="0" class="w-full h-2.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-swagLime mb-6" oninput="actualizarDesdeSlider(this.value)">
 
       <div class="border-t border-white/10 pt-4">
         <span class="text-[10px] text-gray-400 uppercase font-bold block mb-2">Categorías Disponibles:</span>
@@ -410,6 +410,13 @@
             </div>
           </div>
           <div>
+            <label class="text-[10px] text-gray-400 font-bold block mb-1 uppercase">Artículo del catálogo al que llevará esta foto</label>
+            <select id="showcaseProductoId" class="w-full bg-swagGray border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-swagLime">
+              <option value="">Vincular automáticamente por nombre</option>
+            </select>
+            <p class="text-[9px] text-gray-500 mt-1">Selecciona el producto publicado que se abrirá cuando alguien pulse esta imagen.</p>
+          </div>
+          <div>
             <label class="text-[10px] text-gray-400 font-bold block mb-1 uppercase">Fotografía desde tu dispositivo</label>
             <input id="showcaseFoto" type="file" accept="image/*" class="w-full text-[10px] text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-swagLime file:text-black file:font-bold">
             <p class="text-[9px] text-gray-500 mt-1">La imagen se optimiza automáticamente para guardar espacio. Formatos: JPG, PNG o WEBP.</p>
@@ -607,6 +614,6 @@
   <button id="swagInstallBtn" type="button" aria-label="Instalar SWAG en este dispositivo">＋ Instalar SWAG</button>
   
 
-<script src="script.js?v=nosotros-audiofix-20261102-2"></script>
+<script src="script.js?v=ceo-login-catalog-budget-20261102-1"></script>
 </body>
 </html>
